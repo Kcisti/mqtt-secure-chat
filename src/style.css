@@ -224,6 +224,7 @@ button:hover {
   width: 46px;
   height: 46px;
   padding: 0;
+  font-size: 1.4rem;
   display: flex;
   justify-content: center;
   align-items: center;

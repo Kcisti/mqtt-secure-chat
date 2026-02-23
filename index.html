@@ -17,6 +17,8 @@
   <link rel="stylesheet" href="src/style.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 </head>
 
 <body>
@@ -47,10 +49,9 @@
         <input type="text" id="message_input" placeholder="Type a message..." 
         autocomplete="off" onkeydown="if (event.key === 'Enter') sendMessage()">
         <button id="send-btn" onclick="sendMessage()">
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" 
-          stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="22" y1="2" x2="11" y2="13"></line><polygon 
-          points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          
+          <ion-icon name="send"></ion-icon>
+          
         </button>
       </div>
     </div>

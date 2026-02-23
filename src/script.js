@@ -108,7 +108,7 @@ function showScreen(screenId) {
 function setConnectionStatus(isConnected, text) {
   const headerTitle = document.querySelector(".chat-header h2");
   const color = isConnected ? "var(--primary)" : "var(--danger)";
-  headerTitle.innerHTML = `Room: ${currentPin} <span style="color:${color}">●</span>`;
+  headerTitle.innerHTML = `Room: ${currentPin} (EE2E) 🔐 <span style="color:${color}">●</span>`;
   document.getElementById("status-text").innerText = text;
 }
 
@@ -132,6 +132,7 @@ async function connectByPin() {
   const options = {
     useSSL: true,
     cleanSession: false, 
+    keepAliveInterval: 30,
     timeout: 3,
     onSuccess: onConnect,
     onFailure: (err) => {
