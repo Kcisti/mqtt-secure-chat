@@ -1,9 +1,18 @@
-//update now
 let client = null;
 let cryptoKey = null;
 let localChatHistory = []; 
 let currentPin = ""; 
-const MY_CLIENT_ID = "bc_user_" + Date.now() + "_" + Math.random().toString(16).substr(2, 8);
+
+// 1. CORREZIONE FONDAMENTALE: CLIENT ID PERSISTENTE
+// Se ricarichi la pagina, devi avere lo STESSO ID, altrimenti il server
+// pensa che tu sia un utente nuovo e non ti consegna i messaggi persi.
+let storedClientId = localStorage.getItem("mqtt_client_id");
+if (!storedClientId) {
+  storedClientId = "bc_user_" + Date.now() + "_" + Math.random().toString(16).substr(2, 8);
+  localStorage.setItem("mqtt_client_id", storedClientId);
+}
+const MY_CLIENT_ID = storedClientId;
+
 const BROKER_URL = "broker.emqx.io"; 
 const BROKER_PORT = 8084; 
 
@@ -91,7 +100,6 @@ function base64ToArrayBuffer(base64) {
   return bytes.buffer;
 }
 
-
 function showScreen(screenId) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(screenId).classList.add('active');
@@ -124,8 +132,11 @@ async function connectByPin() {
   client.onConnectionLost = onConnectionLost;
   client.onMessageArrived = onMessageArrived;
 
+  // 2. CORREZIONE FONDAMENTALE: cleanSession FALSE
+  // Questo dice al server: "Se mi disconnetto, tieni i messaggi in coda per me"
   const options = {
     useSSL: true,
+    cleanSession: false, 
     timeout: 3,
     onSuccess: onConnect,
     onFailure: (err) => {
@@ -142,7 +153,9 @@ function onConnect() {
   setConnectionStatus(true, "Online");
   console.log("MQTT Connected");
   
-  client.subscribe(`blackchat/room/${currentPin}`);
+  // 3. CORREZIONE FONDAMENTALE: QoS 1
+  // Quando ci iscriviamo, chiediamo QoS 1 per assicurarci di ricevere i messaggi persi
+  client.subscribe(`blackchat/room/${currentPin}`, { qos: 1 });
 }
 
 function onConnectionLost(responseObject) {
@@ -152,7 +165,8 @@ function onConnectionLost(responseObject) {
     setTimeout(() => {
         if(currentPin) {
             console.log("Reconnecting...");
-            client.connect({onSuccess: onConnect, useSSL: true});
+            // Manteniamo cleanSession false anche nella riconnessione
+            client.connect({onSuccess: onConnect, useSSL: true, cleanSession: false});
         }
     }, 2000);
   }
@@ -186,7 +200,6 @@ async function sendMessage() {
     localChatHistory.push(msgObj);
     saveHistory();
     addMessageToUI(text, 'me');
-  
     
     const payloadObj = {
       type: 'MSG',
@@ -199,7 +212,13 @@ async function sendMessage() {
       const encrypted = await encryptData(payloadObj);
       const message = new Paho.MQTT.Message(encrypted);
       message.destinationName = `blackchat/room/${currentPin}`;
+      
+      // 4. CORREZIONE FONDAMENTALE: QoS 1 nel messaggio
+      // Retained rimane false (non vogliamo sovrascrivere l'ultimo messaggio, vogliamo una coda)
+      // QoS 1 dice al server: "Assicurati che questo arrivi a chi è iscritto, anche se ora non c'è"
+      message.qos = 1; 
       message.retained = false; 
+      
       client.send(message);
     } else {
       console.log("Offline: Cannot send now.");
@@ -208,7 +227,6 @@ async function sendMessage() {
     input.value = '';
   }
 }
-
 
 function messageExists(id) {
   return localChatHistory.some(m => m.id === id);
