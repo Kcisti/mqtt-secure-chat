@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  
+  <title>Secure Chat</title>
+  
+  <meta name="theme-color" content="#0f172a">
+  
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="P2P Chat">
+  
+  <link rel="manifest" href="manifest.json">
+
+  <link rel="stylesheet" href="src/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+</head>
+
+<body>
+  <div id="app-container">
+    
+    <div id="login-screen" class="screen active">
+      <div class="login-card">
+        <h1>Secure Chat</h1>
+        <p>Enter a Secret PIN to join a secure, encrypted cloud room.</p>
+        <div class="input-group">
+          <input type="text" id="pin_input" placeholder="E.g. 1234" 
+          autocomplete="off" onkeydown="if (event.key === 'Enter') connectByPin()">
+          <button id="connect-btn" onclick="connectByPin()">Connect</button>
+        </div>
+        <p id="status-text"></p>
+      </div>
+    </div>
+
+    <div id="chat-screen" class="screen">
+      <div class="chat-header">
+        <h2>Room: <span id="room-id-display"></span></h2>
+        <button class="disconnect-btn" onclick="disconnect()">Leave</button>
+      </div>
+      
+      <div id="chat-messages"></div>
+      
+      <div class="chat-input-area">
+        <input type="text" id="message_input" placeholder="Type a message..." 
+        autocomplete="off" onkeydown="if (event.key === 'Enter') sendMessage()">
+        <button id="send-btn" onclick="sendMessage()">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" 
+          stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line><polygon 
+          points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+  <script src="src/script.js"></script>
+</body>
+</html>
