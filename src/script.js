@@ -3,9 +3,6 @@ let cryptoKey = null;
 let localChatHistory = []; 
 let currentPin = ""; 
 
-// 1. CORREZIONE FONDAMENTALE: CLIENT ID PERSISTENTE
-// Se ricarichi la pagina, devi avere lo STESSO ID, altrimenti il server
-// pensa che tu sia un utente nuovo e non ti consegna i messaggi persi.
 let storedClientId = localStorage.getItem("mqtt_client_id");
 if (!storedClientId) {
   storedClientId = "bc_user_" + Date.now() + "_" + Math.random().toString(16).substr(2, 8);
@@ -132,8 +129,6 @@ async function connectByPin() {
   client.onConnectionLost = onConnectionLost;
   client.onMessageArrived = onMessageArrived;
 
-  // 2. CORREZIONE FONDAMENTALE: cleanSession FALSE
-  // Questo dice al server: "Se mi disconnetto, tieni i messaggi in coda per me"
   const options = {
     useSSL: true,
     cleanSession: false, 
@@ -153,8 +148,6 @@ function onConnect() {
   setConnectionStatus(true, "Online");
   console.log("MQTT Connected");
   
-  // 3. CORREZIONE FONDAMENTALE: QoS 1
-  // Quando ci iscriviamo, chiediamo QoS 1 per assicurarci di ricevere i messaggi persi
   client.subscribe(`blackchat/room/${currentPin}`, { qos: 1 });
 }
 
@@ -165,7 +158,6 @@ function onConnectionLost(responseObject) {
     setTimeout(() => {
         if(currentPin) {
             console.log("Reconnecting...");
-            // Manteniamo cleanSession false anche nella riconnessione
             client.connect({onSuccess: onConnect, useSSL: true, cleanSession: false});
         }
     }, 2000);
@@ -213,9 +205,6 @@ async function sendMessage() {
       const message = new Paho.MQTT.Message(encrypted);
       message.destinationName = `blackchat/room/${currentPin}`;
       
-      // 4. CORREZIONE FONDAMENTALE: QoS 1 nel messaggio
-      // Retained rimane false (non vogliamo sovrascrivere l'ultimo messaggio, vogliamo una coda)
-      // QoS 1 dice al server: "Assicurati che questo arrivi a chi è iscritto, anche se ora non c'è"
       message.qos = 1; 
       message.retained = false; 
       
