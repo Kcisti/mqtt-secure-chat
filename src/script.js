@@ -2,6 +2,7 @@ let client = null;
 let cryptoKey = null;
 let localChatHistory = []; 
 let currentPin = ""; 
+let currentTopic = "";
 
 let storedClientId = localStorage.getItem("mqtt_client_id");
 if (!storedClientId) {
@@ -51,6 +52,14 @@ function playNotificationSound() {
   } catch (e) {}
 }
 
+async function hashPinForTopic(pin) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(pin + "secure-chat-topic-salt"); 
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
 async function deriveKey(pin) {
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
@@ -129,6 +138,9 @@ async function connectByPin() {
   if (!pin) return;
 
   currentPin = pin;
+
+  currentTopic = await hashPinForTopic(pin);
+
   loadHistory(currentPin);
   rebuildChatUI();
   showScreen('chat-screen');
@@ -162,7 +174,7 @@ function onConnect() {
   setConnectionStatus(true, "Online");
   console.log("MQTT Connected");
   
-  client.subscribe(`blackchat/room/${currentPin}`, { qos: 1 });
+  client.subscribe(`blackchat/room/${currentTopic}`, { qos: 1 });
 }
 
 function onConnectionLost(responseObject) {
@@ -250,7 +262,7 @@ async function sendMessage() {
     if (client && client.isConnected()) {
       const encrypted = await encryptData(payloadObj);
       const message = new Paho.MQTT.Message(encrypted);
-      message.destinationName = `blackchat/room/${currentPin}`;
+      message.destinationName = `blackchat/room/${currentTopic}`;
       
       message.qos = 1;
       message.retained = true; 
