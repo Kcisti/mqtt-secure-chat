@@ -9,10 +9,14 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjEyMCIgZmlsbD0iIzBmMTIyMSIvPjxwYXRoIGQ9Ik0zMzYgMjA4di01N2MwLTQ0LjEtMzUuOS04MC04MC04MHMtODAgMzUuOS04MCA4MHY1N2MtMTcuNyAwLTMyIDE0LjMtMzIgMzJ2MTQ0YzAgMTcuNyAxNC4zIDMyIDMyIDMyaDE2MGMxNy43IDAgMzItMTQuMyAzMi0zMlYyNDBjMC0xNy43LTE0LjMtMzItMzItMzJ6bS04MCAxMjhjLTE3LjcgMC0zMi0xNC4zLTMyLTMyczE0LjMtMzIgMzItMzIgMzIgMTQuMyAzMiAzMi0xNC4zIDMyLTMyIDMyeiIgZmlsbD0iIzRmNDZlNSIvPjwvc3ZnPg==",
+      "src": "src/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "src/icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }

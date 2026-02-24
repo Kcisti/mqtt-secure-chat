@@ -1,26 +1,20 @@
 :root {
-  /* SFONDI: Nero assoluto (stile OLED/Instagram) */
   --bg-body: #000000;
   --bg-app: #000000;
   
-  /* TESTO: Bianco puro e grigio neutro (senza tinta blu) */
   --text-main: #fafafa;
-  --text-muted: #a8a8a8; /* Grigio medio classico */
+  --text-muted: #a8a8a8; 
 
-  /* ACCENTO: Il blu tipico dei DM di Instagram/Messenger */
   --primary: #301981;    
   --primary-hover:#301981a3;
   
-  /* STATI */
-  --danger: #ed4956;     /* Rosso "Cuore" di Instagram */
+  --danger: #ed4956;  
   --success: #00c853;
 
-  /* BOLLE CHAT */
-  --bubble-me: #301981;  /* Blu vibrante */
-  --bubble-peer: #262626; /* Grigio scuro neutro (non bluastro) */
+  --bubble-me: #301981; 
+  --bubble-peer: #262626; 
 
-  /* ELEMENTI UI */
-  --border-color: #262626; /* Bordi appena visibili */
+  --border-color: #262626; 
 
   --bord-rads:12px;
 }
