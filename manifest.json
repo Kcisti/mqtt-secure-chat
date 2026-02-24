@@ -7,6 +7,7 @@
   "background_color": "#000000",
   "theme_color": "#0f1221",
   "orientation": "portrait",
+  "purpose": "any maskable",
   "icons": [
     {
       "src": "src/icon-192.png",
