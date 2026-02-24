@@ -22,6 +22,11 @@ function loadHistory(pin) {
   } else { localChatHistory = []; }
 }
 
+function scrollToBottom() {
+  const chat = document.getElementById("chat-messages");
+  chat.scrollTop = chat.scrollHeight;
+}
+
 function saveHistory() {
   if (!currentPin) return;
   localStorage.setItem(`bchat_history_${currentPin}`, JSON.stringify(localChatHistory));
@@ -97,7 +102,13 @@ function base64ToArrayBuffer(base64) {
   return bytes.buffer;
 }
 
+function scrollToBottom() {
+  const chat = document.getElementById("chat-messages");
+  chat.scrollTop = chat.scrollHeight;
+}
+
 function showScreen(screenId) {
+  
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(screenId).classList.add('active');
   if (screenId === 'chat-screen') {
@@ -106,9 +117,10 @@ function showScreen(screenId) {
 }
 
 function setConnectionStatus(isConnected, text) {
-  const headerTitle = document.querySelector(".chat-header h2");
+  const headerTitle = document.querySelector(".header-info h3");
   const color = isConnected ? "var(--primary)" : "var(--danger)";
-  headerTitle.innerHTML = `Room: ${currentPin} (EE2E) 🔐 <span style="color:${color}">●</span>`;
+  headerTitle.innerHTML = `Secure Channel ${currentPin} <ion-icon name="lock-closed" 
+  class="header-lock"></ion-icon>  (EE2E)  <span style="color:${color}">●</span>`;
   document.getElementById("status-text").innerText = text;
 }
 
@@ -143,6 +155,7 @@ async function connectByPin() {
   };
   
   client.connect(options);
+  scrollToBottom();
 }
 
 function onConnect() {
@@ -153,7 +166,21 @@ function onConnect() {
 }
 
 function onConnectionLost(responseObject) {
-  setConnectionStatus(false, "Disconnected");
+  setConnectionStatus(false, `Disconnected from ${currentPin}`);
+
+  setTimeout(() => {
+    document.getElementById("status-text").innerText =`Connection Deletion.`;
+  },1700);
+  setTimeout(() => {
+    document.getElementById("status-text").innerText =`Connection Deletion..`;
+  },1800);
+  setTimeout(() => {
+    document.getElementById("status-text").innerText =`Connection Deletion..`;
+  },1900);
+  setTimeout(() => {
+    document.getElementById("status-text").innerText ='';
+  },2000);
+
   if (responseObject.errorCode !== 0) {
     console.log("Connection lost: " + responseObject.errorMessage);
     setTimeout(() => {
@@ -187,6 +214,25 @@ async function sendMessage() {
   const text = input.value.trim();
   
   if (text) {
+
+    if (text === `exit${currentPin}`) {
+      input.value = '';
+      disconnect();    
+      return;          
+    }
+
+    if (text === `clear${currentPin}`) {
+      localChatHistory = [];
+      localStorage.removeItem(`bchat_history_${currentPin}`);
+      
+      document.getElementById("chat-messages").innerHTML = '';
+
+      input.value = '';
+      
+      console.log("Chat history wiped locally.");
+      return;
+    }
+
     const msgId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
     
     const msgObj = { id: msgId, sender: 'me', text: text, time: Date.now() };
@@ -206,12 +252,13 @@ async function sendMessage() {
       const message = new Paho.MQTT.Message(encrypted);
       message.destinationName = `blackchat/room/${currentPin}`;
       
-      message.qos = 1; 
-      message.retained = false; 
+      message.qos = 1;
+      message.retained = true; 
       
       client.send(message);
     } else {
       console.log("Offline: Cannot send now.");
+      alert("You are offline.");
     }
     
     input.value = '';
@@ -228,9 +275,12 @@ function rebuildChatUI() {
   localChatHistory.forEach(msg => {
     addMessageToUI(msg.text, msg.sender);
   });
+
+  scrollToBottom();
 }
 
 function addMessageToUI(text, sender) {
+  scrollToBottom();
   const chat = document.getElementById("chat-messages");
   const wrapper = document.createElement('div');
   wrapper.className = `msg-wrapper ${sender}`;
@@ -249,6 +299,7 @@ function disconnect() {
   client = null;
   cryptoKey = null;
   currentPin = "";
+  document.getElementById('pin_input').value = '';
   showScreen('login-screen');
 }
 

@@ -2,15 +2,15 @@
   "name": "Secure Cloud Chat",
   "short_name": "SecureChat",
   "description": "End-to-End Encrypted Messenger (eeap)",
-  "start_url": "index.html",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#000000",
+  "theme_color": "#0f1221",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "icon.svg",
-      "sizes": "any",
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjEyMCIgZmlsbD0iIzBmMTIyMSIvPjxwYXRoIGQ9Ik0zMzYgMjA4di01N2MwLTQ0LjEtMzUuOS04MC04MC04MHMtODAgMzUuOS04MCA4MHY1N2MtMTcuNyAwLTMyIDE0LjMtMzIgMzJ2MTQ0YzAgMTcuNyAxNC4zIDMyIDMyIDMyaDE2MGMxNy43IDAgMzItMTQuMyAzMi0zMlYyNDBjMC0xNy43LTE0LjMtMzItMzItMzJ6bS04MCAxMjhjLTE3LjcgMC0zMi0xNC4zLTMyLTMyczE0LjMtMzIgMzItMzIgMzIgMTQuMyAzMiAzMi0xNC4zIDMyLTMyIDMyeiIgZmlsbD0iIzRmNDZlNSIvPjwvc3ZnPg==",
+      "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }

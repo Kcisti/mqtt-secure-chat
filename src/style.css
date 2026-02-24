@@ -1,14 +1,28 @@
 :root {
-  --bg-body: #0f172a;
-  --bg-app: #1e293b;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --primary: #3b82f6;
-  --primary-hover: #2563eb;
-  --danger: #ef4444;
-  --bubble-me: #3b82f6;
-  --bubble-peer: #334155;
-  --border-color: #334155;
+  /* SFONDI: Nero assoluto (stile OLED/Instagram) */
+  --bg-body: #000000;
+  --bg-app: #000000;
+  
+  /* TESTO: Bianco puro e grigio neutro (senza tinta blu) */
+  --text-main: #fafafa;
+  --text-muted: #a8a8a8; /* Grigio medio classico */
+
+  /* ACCENTO: Il blu tipico dei DM di Instagram/Messenger */
+  --primary: #301981;    
+  --primary-hover:#301981a3;
+  
+  /* STATI */
+  --danger: #ed4956;     /* Rosso "Cuore" di Instagram */
+  --success: #00c853;
+
+  /* BOLLE CHAT */
+  --bubble-me: #301981;  /* Blu vibrante */
+  --bubble-peer: #262626; /* Grigio scuro neutro (non bluastro) */
+
+  /* ELEMENTI UI */
+  --border-color: #262626; /* Bordi appena visibili */
+
+  --bord-rads:12px;
 }
 
 * {
@@ -43,11 +57,12 @@ body {
   body {
     justify-content: center;
     align-items: center;
+    background-color: #181818;
   }
   #app-container {
     max-width: 600px;
     height: 90vh;
-    border-radius: 16px;
+    border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     overflow: hidden;
   }
@@ -97,13 +112,14 @@ input {
   flex: 1 1 150px; 
   min-width: 0; 
   padding: 12px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-body);
+  border-radius: var(--bord-rads);
+  border: none;
+  background-color: var(--bubble-peer);
   color: white;
   font-size: 1rem;
   outline: none;
   transition: border 0.2s;
+  height: 46px;
 }
 
 button {
@@ -113,15 +129,12 @@ button {
   color: white;
   border: none;
   padding: 12px 20px;
-  border-radius: 8px;
+  border-radius:  var(--bord-rads);
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
   transition: 0.2s;
-}
-
-input:focus { 
-  border-color: var(--primary); 
+  height: 46px;
 }
 
 button:hover { 
@@ -136,28 +149,20 @@ button:hover {
 
 .chat-header {
   padding: 1rem 1.5rem;
-  background-color: rgba(15, 23, 42, 0.5);
+  background-color:var(--bg-app);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-
-.chat-header h2 { 
+.chat-header h3 { 
   font-size: 1.1rem; 
   font-weight: 600; 
 }
 
-.disconnect-btn {
-  margin-left: 2rem;
-  background-color: transparent;
-  border: 1px solid var(--danger);
-  color: var(--danger);
-  padding: 6px 12px;
-  font-size: 1rem;
-}
-.disconnect-btn:hover { 
-  background-color: var(--danger); 
+.header-lock{
+  transform: translateY(4px);
+  font-size: 1.4rem;
 }
 
 #chat-messages {
@@ -169,18 +174,27 @@ button:hover {
   gap: 12px;
 }
 
-#chat-messages::-webkit-scrollbar { 
-  width: 6px; 
-}
-#chat-messages::-webkit-scrollbar-thumb { 
-  background-color: var(--border-color); 
-  border-radius: 4px; 
+
+#chat-messages::-webkit-scrollbar {
+  width: 0px; 
 }
 
 .msg-wrapper {
   display: flex;
   width: 100%;
+  animation: slideInUp 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
+@keyframes slideInUp {
+  0% { 
+    opacity: 0; 
+    transform: translateY(10px); 
+  }
+  100% { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
 .msg-wrapper.me { 
   justify-content: flex-end; 
 }
@@ -195,6 +209,7 @@ button:hover {
   font-size: 0.95rem;
   line-height: 1.4;
   word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .me .msg-bubble { 
@@ -208,24 +223,54 @@ button:hover {
 
 .chat-input-area {
   padding: 1rem 1.5rem;
-  background-color: rgba(15, 23, 42, 0.5);
+  background-color: var(--bg-app);
   border-top: 1px solid var(--border-color);
   display: flex;
   gap: 10px;
+  align-items: center; 
 }
 
 .chat-input-area input { 
-  border-radius: 8px; 
+  padding: 0 16px; 
+  border-radius: var(--bord-rads);
+  flex: 1; 
+  min-width: 0;
+  border: 1px solid var(--border-color);
+  background-color: var(--bubble-peer);
+  color: white;
+  font-size: 1rem;
+  outline: none;
+  transition: border 0.2s;
 }
 
 #send-btn {
-  flex: none;
-  border-radius:8px;
-  width: 46px;
-  height: 46px;
-  padding: 0;
-  font-size: 1.4rem;
+  width:46px;
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 0;
+  padding-left: 3px;
+  flex: none;
+  border-radius: 16px;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  transition: 0.2s;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
