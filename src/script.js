@@ -18,9 +18,9 @@ const BROKER_PORT = 8084;
 
 let lastSoundTime = 0;
 
-const ONESIGNAL_APP_ID = "b8f515f5-6d37-46a9-bc70-ec7bacf3cfb0";
-const KEY_PART_ONE = "os_v2_app_xd2rl5lng5dktpdq5r52z46pwbth24ut7clu7pndesf5jjco6pe7plkc2p";
-const KEY_PART_TWO = "osxd5rieftcsu4e2uhdsynnl3hi27sgjpytdrqhvcsmvy";
+const ONESIGNAL_APP_ID = "40057e4b-4ac4-461c-9cb1-67366efd46b4";
+const KEY_PART_ONE = "os_v2_app_iacx4s2kyrdbzhfrm43g57kgwsndcl543oruupun523ak";
+const KEY_PART_TWO = "sx22j3ruehgdvi7s6dtitbfygnwny23ufrij5x42tlush5urajrne2naoq";
 const ONESIGNAL_API_KEY = KEY_PART_ONE+KEY_PART_TWO; 
 
 function setupPushIdentity() {
