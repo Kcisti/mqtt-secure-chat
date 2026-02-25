@@ -18,8 +18,8 @@ const BROKER_PORT = 8084;
 
 let lastSoundTime = 0;
 
-const ONESIGNAL_APP_ID = "9c8cd7d7-189b-428e-aeb8-4cff2a25a2c5";
-const ONESIGNAL_API_KEY = "os_v2_app_tsgnpvyytnbi5lvyjt7sujncyunevisnlmgujgujhldlx7oanblvqpxzwqf7yuikmejcvo5dlatkoo7vhnxbotzlbyhsbeepqovgvki"; 
+const ONESIGNAL_APP_ID = "b8f515f5-6d37-46a9-bc70-ec7bacf3cfb0";
+const ONESIGNAL_API_KEY = "os_v2_app_xd2rl5lng5dktpdq5r52z46pway44euylgaec3feu5x53nx75pv7sqkusiemlahbteeadejw33dpjgtmtqq5tsggpxg6ligloi6pxfy"; 
 
 function setupPushIdentity() {
     if (window.OneSignalDeferred) {
