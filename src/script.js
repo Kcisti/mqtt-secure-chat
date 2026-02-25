@@ -24,19 +24,34 @@ const ONESIGNAL_API_KEY = "os_v2_app_tsgnpvyytnbi5lvyjt7sujncyunevisnlmgujgujhld
 function setupPushIdentity() {
     if (window.OneSignalDeferred) {
         window.OneSignalDeferred.push(function(OneSignal) {
-            OneSignal.getUserId(function(userId) {
-                console.log("Mio Web Push ID:", userId);
+            
+            const broadcastId = (id) => {
+                if (!id) return;
+                console.log("Push ID:", id);
                 const pushTopic = `blackchat/users/${currentTopic}/push_id`;
-                const message = new Paho.MQTT.Message(userId);
+                const message = new Paho.MQTT.Message(id);
                 message.destinationName = pushTopic;
                 message.retained = true;
-                client.send(message);
+                if (client && client.isConnected()) {
+                     client.send(message);
+                }
+            };
+
+            const currentId = OneSignal.User.PushSubscription.id;
+            if (currentId) {
+                broadcastId(currentId);
+            }
+
+            OneSignal.User.PushSubscription.addEventListener("change", function(event) {
+                if (event.current.id) {
+                    broadcastId(event.current.id);
+                }
             });
+            
+            OneSignal.Slidedown.promptPush();
         });
     }
 }
-
-
 
 function sendPushNotification(targetId, text) {
     const headers = {

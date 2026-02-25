@@ -25,9 +25,15 @@
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
   <script>
     window.OneSignalDeferred = window.OneSignalDeferred || [];
-    OneSignalDeferred.push(async function(OneSignal) {
-      await OneSignal.init({
+    OneSignalDeferred.push(function(OneSignal) {
+      OneSignal.init({
         appId: "9c8cd7d7-189b-428e-aeb8-4cff2a25a2c5",
+        safari_web_id: "",
+        serviceWorkerPath: "OneSignalSDKWorker.js", 
+        serviceWorkerParam: { scope: "/mqtt-secure-chat/" },
+
+        notifyButton: { enable: true },
+        allowLocalhostAsSecureOrigin: true,
       });
     });
   </script>
