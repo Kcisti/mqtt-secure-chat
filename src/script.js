@@ -9,12 +9,55 @@ if (!storedClientId) {
   storedClientId = "bc_user_" + Date.now() + "_" + Math.random().toString(16).substr(2, 8);
   localStorage.setItem("mqtt_client_id", storedClientId);
 }
+
 const MY_CLIENT_ID = storedClientId;
 
+let peerPushId = null; 
 const BROKER_URL = "broker.emqx.io"; 
 const BROKER_PORT = 8084; 
 
 let lastSoundTime = 0;
+
+const ONESIGNAL_APP_ID = "9c8cd7d7-189b-428e-aeb8-4cff2a25a2c5";
+const ONESIGNAL_API_KEY = "os_v2_app_tsgnpvyytnbi5lvyjt7sujncyunevisnlmgujgujhldlx7oanblvqpxzwqf7yuikmejcvo5dlatkoo7vhnxbotzlbyhsbeepqovgvki"; 
+
+function setupPushIdentity() {
+    if (window.OneSignalDeferred) {
+        window.OneSignalDeferred.push(function(OneSignal) {
+            OneSignal.getUserId(function(userId) {
+                console.log("Mio Web Push ID:", userId);
+                const pushTopic = `blackchat/users/${currentTopic}/push_id`;
+                const message = new Paho.MQTT.Message(userId);
+                message.destinationName = pushTopic;
+                message.retained = true;
+                client.send(message);
+            });
+        });
+    }
+}
+
+
+
+function sendPushNotification(targetId, text) {
+    const headers = {
+        "Content-Type": "application/json; charset=utf-8",
+        "Authorization": "Basic " + ONESIGNAL_API_KEY
+    };
+
+    const data = {
+        app_id: ONESIGNAL_APP_ID,
+        include_player_ids: [targetId],
+        contents: { "en": text },
+        headings: { "en": "New Secure Message" },
+        url: "https://kciati.github.io/mqtt-secure-chat/" 
+    };
+
+    fetch("https://onesignal.com/api/v1/notifications", {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(data)
+    });
+}
 
 function loadHistory(pin) {
   const saved = localStorage.getItem(`bchat_history_${pin}`);
@@ -175,6 +218,10 @@ function onConnect() {
   console.log("MQTT Connected");
   
   client.subscribe(`blackchat/room/${currentTopic}`, { qos: 1 });
+
+  client.subscribe(`blackchat/users/${currentTopic}/push_id`, { qos: 1 });
+
+  setupPushIdentity(); 
 }
 
 function onConnectionLost(responseObject) {
@@ -205,6 +252,15 @@ function onConnectionLost(responseObject) {
 }
 
 async function onMessageArrived(message) {
+  if (message.destinationName.includes("push_id")) {
+      const incomingId = message.payloadString;
+
+      if (incomingId !== storedClientId && !incomingId.includes(storedClientId)) { 
+          console.log("ID Friend Founded:", incomingId);
+          peerPushId = incomingId;
+      }
+      return;
+  }
   const encryptedPayload = message.payloadString;
   const data = await decryptData(encryptedPayload);
   
@@ -268,6 +324,10 @@ async function sendMessage() {
       message.retained = true; 
       
       client.send(message);
+      if (peerPushId) {
+          sendPushNotification(peerPushId, "New Secure Message");
+      }
+
     } else {
       console.log("Offline: Cannot send now.");
       alert("You are offline.");
