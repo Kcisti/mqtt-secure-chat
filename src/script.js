@@ -398,6 +398,7 @@ function disconnect() {
 }
 
 document.getElementById('message_input').addEventListener('click', scrollToBottom);
+document.getElementById('message_input').addEventListener('focus', scrollToBottom);
 
 window.addEventListener('popstate', (event) => {
   if (document.getElementById('chat-screen').classList.contains('active')) {
