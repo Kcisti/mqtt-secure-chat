@@ -66,7 +66,7 @@ function sendPushNotification(targetId, text) {
         include_player_ids: [targetId],
         contents: { "en": text },
         headings: { "en": "New Secure Message" },
-        url: "https://kcisti.github.io/mqtt-secure-chat/" 
+        url: "https://secure-room.me" 
     };
 
     fetch("https://onesignal.com/api/v1/notifications", {
