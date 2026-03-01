@@ -31,7 +31,8 @@ function setupPushIdentity() {
                 if (!id) return;
                 console.log("Push ID:", id);
                 const pushTopic = `blackchat/users/${currentTopic}/push_id`;
-                const message = new Paho.MQTT.Message(id);
+                const payload = JSON.stringify({ pushId: id, mqttId: MY_CLIENT_ID });
+                const message = new Paho.MQTT.Message(payload);
                 message.destinationName = pushTopic;
                 message.retained = true;
                 if (client && client.isConnected()) {
@@ -65,7 +66,7 @@ function sendPushNotification(targetId, text) {
         app_id: ONESIGNAL_APP_ID,
         include_player_ids: [targetId],
         contents: { "en": text },
-        headings: { "en": "New Secure Message" },
+        headings: { "en": `New Secure Message from ${currentPin}` }, 
         url: "https://secure-room.me" 
     };
 
@@ -270,13 +271,16 @@ function onConnectionLost(responseObject) {
 
 async function onMessageArrived(message) {
   if (message.destinationName.includes("push_id")) {
-      const incomingId = message.payloadString;
-
-      if (incomingId !== storedClientId && !incomingId.includes(storedClientId)) { 
-          console.log("ID Friend Founded:", incomingId);
-          peerPushId = incomingId;
-      }
-      return;
+    try {
+        const info = JSON.parse(message.payloadString);
+        if (info.mqttId !== MY_CLIENT_ID) { 
+            console.log("ID Friend Founded:", info.pushId);
+            peerPushId = info.pushId;
+        }
+    } catch (e) {
+        console.log("Error push_id", e);
+    }
+    return;
   }
   const encryptedPayload = message.payloadString;
   const data = await decryptData(encryptedPayload);
