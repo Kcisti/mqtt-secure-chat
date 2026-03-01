@@ -175,6 +175,7 @@ function base64ToArrayBuffer(base64) {
 function scrollToBottom() {
   const chat = document.getElementById("chat-messages");
   chat.scrollTop = chat.scrollHeight;
+  console.log("--scrollToBottom");
 }
 
 function showScreen(screenId) {
@@ -189,7 +190,7 @@ function showScreen(screenId) {
 function setConnectionStatus(isConnected, text) {
   const headerTitle = document.querySelector(".header-info h3");
   const color = isConnected ? "var(--primary)" : "var(--danger)";
-  headerTitle.innerHTML = `Secure Channel ${currentPin} <ion-icon name="lock-closed" 
+  headerTitle.innerHTML = `Secure Room ${currentPin} <ion-icon name="lock-closed" 
   class="header-lock"></ion-icon>  (EE2E)  <span style="color:${color}">●</span>`;
   document.getElementById("status-text").innerText = text;
 }
@@ -396,7 +397,7 @@ function disconnect() {
   showScreen('login-screen');
 }
 
-document.getElementById('message_input').addEventListener('focus', scrollToBottom);
+document.getElementById('message_input').addEventListener('click', scrollToBottom);
 
 window.addEventListener('popstate', (event) => {
   if (document.getElementById('chat-screen').classList.contains('active')) {

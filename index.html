@@ -45,8 +45,8 @@
         <h1>Secure Room</h1>
         <p>Enter a Secret PIN to join a secure, encrypted cloud room.</p>
         <div class="input-group">
-          <input type="text" id="pin_input" placeholder="E.g. 1234" 
-          autocomplete="off" onkeydown="if (event.key === 'Enter') connectByPin()"
+          <input type="search" id="pin_input" placeholder="E.g. 1234" 
+          autocomplete="nope" onkeydown="if (event.key === 'Enter') connectByPin()"
           autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
           <button id="connect-btn" onclick="connectByPin()">Connect</button>
         </div>
@@ -57,15 +57,15 @@
     <div id="chat-screen" class="screen">
       <div class="chat-header">
         <div class="header-info">
-          <h3><ion-icon name="lock-closed"></ion-icon> Secure Channel</h3>
+          <h3><ion-icon name="lock-closed"></ion-icon> Secure Room</h3>
         </div>
       </div>
   
       <div id="chat-messages"></div>
       
       <div class="chat-input-area">
-        <input type="text" id="message_input" placeholder="Type a message..." 
-        autocomplete="off" onkeydown="if (event.key === 'Enter') sendMessage()"
+        <input type="search" id="message_input" placeholder="Type a message..." 
+        autocomplete="nope" onkeydown="if (event.key === 'Enter') sendMessage()"
         autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
         <button id="send-btn" onclick="sendMessage()">
           
