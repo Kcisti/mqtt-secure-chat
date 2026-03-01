@@ -1,6 +1,6 @@
 {
-  "name": "Secure Cloud Chat",
-  "short_name": "SecureChat",
+  "name": "Secure Cloud Room",
+  "short_name": "SecureRoom",
   "description": "End-to-End Encrypted Messenger (eeap)",
   "start_url": "./index.html",
   "display": "standalone",
