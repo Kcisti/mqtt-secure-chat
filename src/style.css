@@ -32,6 +32,16 @@ html, body {
   overflow: hidden;
 }
 
+html, body {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%; 
+  height: 100dvh;
+  overflow: hidden;
+}
+
 body {
   background-color: var(--bg-body);
   color: var(--text-main);
@@ -85,21 +95,21 @@ body {
 }
 
 .login-card h1 {
-  font-size: 2rem;
+  font-size: 2.2rem;
   margin-bottom: 0.5rem;
 }
 
 .login-card p {
   color: var(--text-muted);
   margin-bottom: 2rem;
-  font-size: 0.95rem;
+  font-size: 1.1525rem;
 }
 
 .input-group {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 1rem;
+  margin-bottom: 1.2rem;
 }
 
 input {
@@ -110,10 +120,10 @@ input {
   border: none;
   background-color: var(--bubble-peer);
   color: white;
-  font-size: 1rem;
+  font-size: 1.2rem;
   outline: none;
   transition: border 0.2s;
-  height: 46px;
+  height: 50px;
 }
 
 button {
@@ -124,11 +134,11 @@ button {
   border: none;
   padding: 12px 20px 12px;
   border-radius:  var(--bord-rads);
-  font-size: 1rem;
+  font-size: 1.2rem;
   font-weight: 500;
   cursor: pointer;
   transition: 0.2s;
-  height: 46px;
+  height: 50px;
 }
 
 button:hover { 
@@ -150,13 +160,13 @@ button:hover {
   align-items: center;
 }
 .chat-header h3 { 
-  font-size: 1.1rem; 
+  font-size: 1.3rem; 
   font-weight: 600; 
 }
 
 .header-lock{
   transform: translateY(4px);
-  font-size: 1.4rem;
+  font-size: 1.6rem;
 }
 
 #chat-messages {
@@ -200,7 +210,7 @@ button:hover {
   max-width: 75%;
   padding: 10px 14px;
   border-radius: 12px;
-  font-size: 0.95rem;
+  font-size: 1.2rem;
   line-height: 1.4;
   word-wrap: break-word;
   box-shadow: 0 1px 2px rgba(0,0,0,0.1);
@@ -232,13 +242,13 @@ button:hover {
   border: 1px solid var(--border-color);
   background-color: var(--bubble-peer);
   color: white;
-  font-size: 1rem;
+  font-size: 1.2rem;
   outline: none;
   transition: border 0.2s;
 }
 
 #send-btn {
-  width:46px;
+  width:50px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -249,7 +259,7 @@ button:hover {
   background-color: var(--primary);
   color: white;
   border: none;
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   cursor: pointer;
   transition: 0.2s;
 }

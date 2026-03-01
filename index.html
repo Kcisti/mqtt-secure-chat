@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
   <title>Secure Room</title>
   
   <meta name="theme-color" content="#0f172a">
@@ -47,7 +46,8 @@
         <p>Enter a Secret PIN to join a secure, encrypted cloud room.</p>
         <div class="input-group">
           <input type="text" id="pin_input" placeholder="E.g. 1234" 
-          autocomplete="off" onkeydown="if (event.key === 'Enter') connectByPin()">
+          autocomplete="off" onkeydown="if (event.key === 'Enter') connectByPin()"
+          autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
           <button id="connect-btn" onclick="connectByPin()">Connect</button>
         </div>
         <p id="status-text"></p>
@@ -65,7 +65,8 @@
       
       <div class="chat-input-area">
         <input type="text" id="message_input" placeholder="Type a message..." 
-        autocomplete="off" onkeydown="if (event.key === 'Enter') sendMessage()">
+        autocomplete="off" onkeydown="if (event.key === 'Enter') sendMessage()"
+        autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
         <button id="send-btn" onclick="sendMessage()">
           
           <ion-icon name="send"></ion-icon>

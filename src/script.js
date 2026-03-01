@@ -396,6 +396,8 @@ function disconnect() {
   showScreen('login-screen');
 }
 
+document.getElementById('message_input').addEventListener('focus', scrollToBottom);
+
 window.addEventListener('popstate', (event) => {
   if (document.getElementById('chat-screen').classList.contains('active')) {
     event.preventDefault(); 
