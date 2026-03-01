@@ -65,8 +65,8 @@ function sendPushNotification(targetId, text) {
     const data = {
         app_id: ONESIGNAL_APP_ID,
         include_player_ids: [targetId],
-        contents: { "en": text },
-        headings: { "en": `New Secure Message from ${currentPin}` }, 
+        headings: { "en": `Secure Room ${currentPin}` },
+        contents: { "en": `New Secure Message` }, 
         url: "https://secure-room.me" 
     };
 
