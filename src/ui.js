@@ -49,6 +49,35 @@ export function addMessageToUI(content, sender, isBomb = false, msgType = 'text'
       icon.className = 'bomb-icon bomb-icon-img';
       bubble.appendChild(icon);
     }
+  } else if (msgType === 'location') {
+    const fileDiv = document.createElement('div');
+    fileDiv.className = 'file-attachment';
+   
+    fileDiv.innerHTML = `<ion-icon name="location"></ion-icon> <span>${fileName}</span>`;
+    fileDiv.onclick = () => window.open(content, '_blank');
+    bubble.appendChild(fileDiv);
+    
+    if (isBomb) {
+      const icon = document.createElement('ion-icon');
+      icon.setAttribute('name', 'time');
+      icon.className = 'bomb-icon bomb-icon-img';
+      bubble.appendChild(icon);
+    }
+  } else if (msgType === 'document') {
+    const fileDiv = document.createElement('div');
+    fileDiv.className = 'file-attachment';
+
+    fileDiv.innerHTML = `<ion-icon name="document-text-outline"></ion-icon> <span>${fileName}</span>`;
+    
+    fileDiv.onclick = () => {
+        const downloadLink = document.createElement('a');
+        downloadLink.href = content; 
+        downloadLink.download = fileName;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    };
+    bubble.appendChild(fileDiv);
   } else {
     if (isBomb) {
       const textSpan = document.createElement('span');
@@ -78,9 +107,19 @@ export function rebuildChatUI(historyArray) {
 }
 
 export function openImageViewer(base64Data, fileName) {
+
   document.getElementById('viewer-image').src = base64Data;
   document.getElementById('viewer-filename').innerText = fileName;
   showScreen('viewer-screen');
+
+
+  const downloadLink = document.createElement('a');
+  downloadLink.href = base64Data;
+  downloadLink.download = fileName; 
+  
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  document.body.removeChild(downloadLink);
 }
 
 export function closeImageViewer() {
