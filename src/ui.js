@@ -2,7 +2,7 @@ export function scrollToBottom() {
   const chat = document.getElementById("chat-messages");
   setTimeout(() => {
     chat.scrollTop = chat.scrollHeight;
-  }, 500);
+  }, 200);
   
   const panel = document.getElementById('attachment-panel');
   if (panel && panel.classList.contains('open')) {
@@ -26,7 +26,7 @@ export function setConnectionStatus(isConnected, currentPin, text) {
   document.getElementById("status-text").innerText = text;
 }
 
-export function addMessageToUI(content, sender, isBomb = false, msgType = 'text') {
+export function addMessageToUI(content, sender, isBomb = false, msgType = 'text', fileName = 'image.jpg') {
   scrollToBottom();
   const chat = document.getElementById("chat-messages");
   const wrapper = document.createElement('div');
@@ -34,7 +34,22 @@ export function addMessageToUI(content, sender, isBomb = false, msgType = 'text'
   const bubble = document.createElement('div');
   bubble.className = 'msg-bubble';
 
+  if (msgType === 'image') {
+    const fileDiv = document.createElement('div');
+    fileDiv.className = 'file-attachment';
+    fileDiv.innerHTML = `<ion-icon name="image"></ion-icon> <span>${fileName}</span>`;
 
+    fileDiv.onclick = () => openImageViewer(content, fileName);
+    
+    bubble.appendChild(fileDiv);
+    
+    if (isBomb) {
+      const icon = document.createElement('ion-icon');
+      icon.setAttribute('name', 'time');
+      icon.className = 'bomb-icon bomb-icon-img';
+      bubble.appendChild(icon);
+    }
+  } else {
     if (isBomb) {
       const textSpan = document.createElement('span');
       textSpan.innerText = content;
@@ -46,6 +61,7 @@ export function addMessageToUI(content, sender, isBomb = false, msgType = 'text'
     } else {
       bubble.innerText = content;
     }
+  }
   
   wrapper.appendChild(bubble);
   chat.appendChild(wrapper);
@@ -56,9 +72,20 @@ export function rebuildChatUI(historyArray) {
   const chat = document.getElementById("chat-messages");
   chat.innerHTML = ''; 
   historyArray.forEach(msg => {
-    addMessageToUI(msg.text, msg.sender, msg.isBomb, msg.msgType || 'text');
+    addMessageToUI(msg.text, msg.sender, msg.isBomb, msg.msgType || 'text', msg.fileName);
   });
   scrollToBottom();
+}
+
+export function openImageViewer(base64Data, fileName) {
+  document.getElementById('viewer-image').src = base64Data;
+  document.getElementById('viewer-filename').innerText = fileName;
+  showScreen('viewer-screen');
+}
+
+export function closeImageViewer() {
+  document.getElementById('viewer-image').src = ''; 
+  showScreen('chat-screen');
 }
 
 let lastSoundTime = 0;

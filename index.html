@@ -64,11 +64,23 @@
       <div id="chat-messages"></div>
 
       <div id="attachment-panel">
-        <div class="attach-item">
+        
+        <input type="file" id="image_input" accept="image/*" style="display: none;">
+        
+        <div class="attach-item" id="btn-send-photo">
           <div class="icon-circle"><ion-icon name="image"></ion-icon></div>
         </div>
+        
         <div class="attach-item">
-          <div class="icon-circle"><ion-icon name="mic"></ion-icon></div>
+          <div class="icon-circle"><ion-icon name="refresh"></ion-icon></div>
+        </div>
+
+        <div class="attach-item">
+          <div class="icon-circle"><ion-icon name="refresh"></ion-icon></div>
+        </div>
+        
+        <div class="attach-item">
+          <div class="icon-circle"><ion-icon name="refresh"></ion-icon></div>
         </div>
       </div>
       
@@ -85,6 +97,20 @@
         <button id="send-btn" >
           <ion-icon name="send"></ion-icon>
         </button>
+      </div>
+    </div>
+
+    <div id="viewer-screen" class="screen">
+      <div class="chat-header">
+        <h3 id="viewer-filename">Foto</h3>
+        <button id="close-viewer-btn">
+          <ion-icon name="close"></ion-icon>
+        </button>
+        <div class="header-spacer"></div>
+      </div>
+      
+      <div id="viewer-content">
+        <img id="viewer-image" src="">
       </div>
     </div>
 

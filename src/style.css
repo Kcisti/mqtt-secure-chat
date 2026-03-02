@@ -24,6 +24,8 @@
   margin: 0;
   padding: 0;
   font-family: 'Inter', sans-serif;
+  -webkit-tap-highlight-color: transparent; 
+  outline: none;
 }
 
 html, body {
@@ -317,7 +319,7 @@ button:hover {
   flex: none;
   border-radius: 16px;
   background-color: var(--primary);
-  color: white;
+  color: var(--text-main);
   border: none;
   font-size: 1.6rem;
   cursor: pointer;
@@ -345,18 +347,23 @@ button:hover {
   100% { opacity: 0.3; transform: scale(0.95); }
 }
 
+
 #attachment-panel {
   display: flex;
-  gap: 10px;
+  justify-content: space-between;
+  align-items: center; 
   padding: 0 1.5rem;
+  margin: 0 1.5rem;
   background-color: var(--bg-app);
+  border-radius: var(--bord-rads);
   overflow: hidden;
   max-height: 0; 
   opacity: 0;
   transform-origin: bottom right;
   transform: scale(0.5) translate(20px, 20px);
-  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.1); 
 }
+
 #attachment-panel.open {
   max-height: 120px;
   opacity: 1;
@@ -367,10 +374,30 @@ button:hover {
   transform: scale(1) translate(0, 0);
 }
 
-.attach-item {
+
+#attachment-panel {
   display: flex;
-  flex-direction: row;
+  justify-content: space-between;
+  align-items: center; 
+  padding: 0 1.5rem;
+  margin: 0 1.5rem;
+  background-color: var(--bg-app);
+  border-radius: var(--bord-rads);
+  overflow: hidden;
+  max-height: 0; 
+  opacity: 0;
+  transform-origin: bottom right;
+  transform: scale(0.5) translate(20px, 20px);
+  transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.1); 
+}
+
+
+.attach-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: 8px;
   cursor: pointer;
   color: var(--text-muted);
   transition: color 0.2s;
@@ -389,7 +416,7 @@ button:hover {
   justify-content: center;
   align-items: center;
   font-size: 1.5rem;
-  color: var(--primary);
+  color: var(--text-muted);
   transition: transform 0.2s, background-color 0.2s;
 }
 
@@ -397,3 +424,70 @@ button:hover {
   transform: scale(0.9); 
 }
 
+.file-attachment {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.file-attachment ion-icon {
+  font-size: 1.8rem;
+}
+
+.file-attachment span {
+  font-size: 1.1rem;
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.file-attachment:active {
+  opacity: 0.7;
+}
+
+#viewer-filename {
+  flex: 1;
+  text-align: left;
+  font-size: 1.1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 15px; 
+}
+
+#close-viewer-btn {
+  background-color: transparent;
+  padding: 0;
+  width: 40px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  border: none;
+  cursor: pointer;
+}
+
+#close-viewer-btn ion-icon {
+  font-size: 1.8rem;
+  color: white;
+}
+#close-viewer-btn:active{
+  transform: scale(0.9);
+  transform: translateX(0.2rem);
+}
+
+#viewer-content {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--bg-body); 
+  padding: 1rem;
+}
+
+#viewer-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain; 
+  border-radius: 8px;
+}

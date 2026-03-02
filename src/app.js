@@ -1,6 +1,6 @@
 import { hashPinForTopic, deriveKey, encryptData, decryptData } from './crypto.js';
 import { scrollToBottom, showScreen, setConnectionStatus, addMessageToUI,
-  rebuildChatUI, playNotificationSound, applyPrivacyMode } from './ui.js';
+rebuildChatUI, playNotificationSound, applyPrivacyMode, closeImageViewer } from './ui.js';
 
 let client = null;
 let cryptoKey = null;
@@ -166,12 +166,22 @@ async function onMessageArrived(message) {
   const data = await decryptData(message.payloadString, cryptoKey);
   if (!data || data.senderId === MY_CLIENT_ID) return;
 
-  if (data.type === 'MSG' && !messageExists(data.id)) {
+  if ((data.type === 'MSG' || data.type === 'IMG') && !messageExists(data.id)) {
 
-      const msgObj = { id: data.id, sender: 'peer', text: data.text, time: Date.now(), isBomb: data.isBomb };
+      const isImage = data.type === 'IMG';
+      
+      const msgObj = { 
+        id: data.id, 
+        sender: 'peer', 
+        text: data.text, 
+        time: Date.now(), 
+        isBomb: data.isBomb, 
+        msgType: isImage ? 'image' : 'text',
+        fileName: data.fileName || 'secure_image.jpg'
+      };
       localChatHistory.push(msgObj);
       saveHistory();
-      addMessageToUI(msgObj.text, 'peer', data.isBomb);
+      addMessageToUI(msgObj.text, 'peer', data.isBomb, msgObj.msgType, msgObj.fileName);
       playNotificationSound();
       
       if (data.isBomb) {
@@ -281,6 +291,8 @@ document.getElementById('message_input').addEventListener('input', function() {
   const attachIcon = document.querySelector('#attach-btn ion-icon');
   const currentIcon = attachIcon.getAttribute('name');
   
+  if (panel) panel.classList.remove('open');
+  
   if (this.value.trim().length > 0) {
     if (currentIcon === 'add') {
       attachIcon.setAttribute('name', 'radio-button-off');
@@ -288,6 +300,17 @@ document.getElementById('message_input').addEventListener('input', function() {
   } else {
     attachIcon.setAttribute('name', 'add'); 
     attachIcon.style.color = ''; 
+  }
+});
+
+document.addEventListener('click', function(event) {
+  const panel = document.getElementById('attachment-panel');
+  const attachBtn = document.getElementById('attach-btn');
+  
+  if (panel && panel.classList.contains('open')) {
+    if (!panel.contains(event.target) && !attachBtn.contains(event.target)) {
+      panel.classList.remove('open');
+    }
   }
 });
 
@@ -308,3 +331,68 @@ document.getElementById('attach-btn').addEventListener('click', function() {
 });
 
 
+
+document.getElementById('btn-send-photo').addEventListener('click', function() {
+  document.getElementById('image_input').click();
+});
+
+document.getElementById('image_input').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const originalFileName = file.name; // CATTURIAMO IL NOME DEL FILE!
+
+  const reader = new FileReader();
+  reader.onload = function(event) {
+      const img = new Image();
+      img.onload = async function() {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800; 
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+              if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+          } else {
+              if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const base64Img = canvas.toDataURL('image/jpeg', 0.6);
+          const msgId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+          const attachIcon = document.querySelector('#attach-btn ion-icon');
+          const isBombActive = attachIcon.getAttribute('name') === 'radio-button-on';
+
+          // SALVIAMO IL NOME DEL FILE IN MEMORIA
+          const msgObj = { id: msgId, sender: 'me', text: base64Img, time: Date.now(), isBomb: isBombActive, msgType: 'image', fileName: originalFileName };
+          localChatHistory.push(msgObj);
+          saveHistory();
+          addMessageToUI(base64Img, 'me', isBombActive, 'image', originalFileName);
+
+          // INVIAMO IL NOME DEL FILE AL SERVER
+          if (client && client.isConnected()) {
+              const payloadObj = { type: 'IMG', text: base64Img, id: msgId, senderId: MY_CLIENT_ID, isBomb: isBombActive, fileName: originalFileName };
+              const encrypted = await encryptData(payloadObj, cryptoKey);
+              const message = new Paho.MQTT.Message(encrypted);
+              message.destinationName = `blackchat/room/${currentTopic}`;
+              message.qos = 1; message.retained = true; 
+              client.send(message);
+          }
+          
+          document.getElementById('attachment-panel').classList.remove('open');
+          if (isBombActive) startAutodestructTimer(msgId);
+          document.getElementById('image_input').value = '';
+      }
+      img.src = event.target.result;
+  }
+  reader.readAsDataURL(file);
+});
+
+// Bottone indietro del visualizzatore
+document.getElementById('close-viewer-btn').addEventListener('click', function() {
+  closeImageViewer();
+});
