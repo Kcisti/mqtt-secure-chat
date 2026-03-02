@@ -95,7 +95,7 @@ body {
 }
 
 .login-card h1 {
-  font-size: 2.2rem;
+  font-size: 2.4rem;
   margin-bottom: 0.5rem;
 }
 
@@ -166,15 +166,36 @@ button:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  user-select: none;
 }
 .chat-header h3 { 
   font-size: 1.4rem; 
   font-weight: 600; 
 }
 
+
+.privacy-mode .msg-bubble {
+  filter: blur(6px);
+  opacity: 0.7;
+  user-select: none;
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+.privacy-mode .msg-bubble:active {
+  filter: blur(0px);
+  opacity: 1;
+  transition: filter 0.1s ease;
+}
+
+.header-lock:active {
+  transform: translateY(4px) scale(0.9); 
+}
+
 .header-lock{
   transform: translateY(4px);
   font-size: 1.6rem;
+  cursor: pointer;
+  transition: transform 0.2s;
 }
 
 #chat-messages {
@@ -238,21 +259,52 @@ button:hover {
   background-color: var(--bg-app);
   border-top: 1px solid var(--border-color);
   display: flex;
-  gap: 10px;
+  gap:10px;
   align-items: center; 
+}
+
+.input-container{
+  display: flex;
+  flex-direction: row;
+  border: 1px solid var(--border-color);
+  border-radius: var(--bord-rads);
+  background-color: var(--bubble-peer);
+  flex: 1;
+  height: 50px;
+  overflow: hidden;
 }
 
 .chat-input-area input { 
   padding: 0 16px; 
-  border-radius: var(--bord-rads);
   flex: 1; 
   min-width: 0;
-  border: 1px solid var(--border-color);
   background-color: var(--bubble-peer);
   color: white;
   font-size: 1.2rem;
   outline: none;
   transition: border 0.2s;
+}
+
+#attach-btn {
+  max-width: 50px;
+  background-color: transparent; 
+  color: var(--text-muted);
+  padding: 0;
+  height: 50px;
+  display: flex;
+  font-weight: 1000;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem; 
+  border-radius: 0;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+
+#attach-btn ion-icon[name="radio-button-off"],
+#attach-btn ion-icon[name="radio-button-on"] {
+  font-size: 1.6rem; 
 }
 
 #send-btn {
@@ -272,17 +324,76 @@ button:hover {
   transition: 0.2s;
 }
 
+#attach-btn:active, #send-btn:active {
+  transform: scale(0.9); 
+}
 
+.bomb-icon {
+  display: inline-block;
+  vertical-align: -4px; 
+  margin-left: 4px;
+  font-size: 1.2rem;
+  line-height: 0; 
+  color: var(--text-muted);
+  opacity: 0.7;
+  animation: tick-tock 2s infinite ease-in-out;
+}
 
+@keyframes tick-tock {
+  0% { opacity: 0.3; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 0.3; transform: scale(0.95); }
+}
 
+#attachment-panel {
+  display: flex;
+  gap: 10px;
+  padding: 0 1.5rem;
+  background-color: var(--bg-app);
+  overflow: hidden;
+  max-height: 0; 
+  opacity: 0;
+  transform-origin: bottom right;
+  transform: scale(0.5) translate(20px, 20px);
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+}
+#attachment-panel.open {
+  max-height: 120px;
+  opacity: 1;
+  padding: 1rem 1.5rem;
+  background-color: #171717;
+  margin: 0.4rem 1.5rem;
+  border-radius: var(--bord-rads);
+  transform: scale(1) translate(0, 0);
+}
 
+.attach-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.2s;
+}
 
+.attach-item:hover {
+  color: var(--text-main);
+}
 
+.attach-item .icon-circle {
+  width: 50px;
+  height: 50px;
+  border-radius: var(--bord-rads);
+  background-color: var(--bubble-peer); 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5rem;
+  color: var(--primary);
+  transition: transform 0.2s, background-color 0.2s;
+}
 
-
-
-
-
-
-
+.attach-item:active{
+  transform: scale(0.9); 
+}
 

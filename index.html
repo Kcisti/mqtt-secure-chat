@@ -9,7 +9,7 @@
   
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="P2P Chat">
+  <meta name="apple-mobile-web-app-title" content="Secure Room">
   
   <link rel="manifest" href="manifest.json">
 
@@ -46,9 +46,9 @@
         <p>Enter a Secret PIN to join a secure, encrypted cloud room.</p>
         <div class="input-group">
           <input type="search" id="pin_input" placeholder="E.g. 1234" 
-          autocomplete="nope" onkeydown="if (event.key === 'Enter') connectByPin()"
-          autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
-          <button id="connect-btn" onclick="connectByPin()">Connect</button>
+          autocomplete="off" autocorrect="off" autocapitalize="off"
+          spellcheck="false" data-lpignore="true">
+          <button id="connect-btn" >Connect</button>
         </div>
         <p id="status-text"></p>
       </div>
@@ -62,20 +62,33 @@
       </div>
   
       <div id="chat-messages"></div>
+
+      <div id="attachment-panel">
+        <div class="attach-item">
+          <div class="icon-circle"><ion-icon name="image"></ion-icon></div>
+        </div>
+        <div class="attach-item">
+          <div class="icon-circle"><ion-icon name="mic"></ion-icon></div>
+        </div>
+      </div>
       
-      <div class="chat-input-area">
-        <input type="search" id="message_input" placeholder="Type a message..." 
-        autocomplete="nope" onkeydown="if (event.key === 'Enter') sendMessage()"
-        autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
-        <button id="send-btn" onclick="sendMessage()">
-          
+      <div class="chat-input-area"> 
+        <div class="input-container">
+          <input type="search" id="message_input" placeholder="Type a message..." 
+          autocomplete="off" autocorrect="off" autocapitalize="off"
+          spellcheck="false" data-lpignore="true">
+
+          <button id="attach-btn" aria-label="Aggiungi">
+            <ion-icon name="add"></ion-icon>
+          </button>
+        </div>
+        <button id="send-btn" >
           <ion-icon name="send"></ion-icon>
-          
         </button>
       </div>
     </div>
 
   </div>
-  <script src="src/script.js"></script>
+  <script type="module" src="src/app.js"></script>
 </body>
 </html>
