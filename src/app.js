@@ -33,7 +33,6 @@ function queueOrSend(message, requiresPush = false) {
         client.send(message);
         if (requiresPush && peerPushId) sendPushNotification(peerPushId, "New Secure Message");
     } else {
-        console.log("Client offline. Message added to queue.");
         offlineQueue.push({ msg: message, push: requiresPush });
     }
 }
@@ -43,7 +42,6 @@ function startAutodestructTimer(msgId, delay = 10000) {
       localChatHistory = localChatHistory.filter(m => m.id !== msgId);
       saveHistory(); 
       rebuildChatUI(localChatHistory); 
-      console.log(`💥 Message ${msgId} destroyed!`);
   }, delay); 
 }
 
@@ -52,9 +50,7 @@ async function saveHistory() {
   try {
       const encryptedData = await encryptData(localChatHistory, cryptoKey);
       localStorage.setItem(`bchat_history_${currentPin}`, encryptedData);
-  } catch (error) {
-      console.error("Failed to encrypt local history:", error);
-  }
+  } catch (error) {}
 }
 
 async function loadHistory(pin) {
@@ -62,7 +58,6 @@ async function loadHistory(pin) {
   if (saved) {
     try { 
         const decryptedArray = await decryptData(saved, cryptoKey);
-        
         if (decryptedArray && Array.isArray(decryptedArray)) {
             localChatHistory = decryptedArray; 
             const now = Date.now();
@@ -84,11 +79,26 @@ async function loadHistory(pin) {
             localChatHistory = [];
         }
     } catch (e) { 
-        console.warn("Could not decrypt history. Starting fresh.");
         localChatHistory = []; 
     }
   } else { 
       localChatHistory = []; 
+  }
+}
+
+function resetInputState() {
+  const input = document.getElementById('message_input');
+  const attachIcon = document.querySelector('#attach-btn ion-icon');
+  const panelIcon = document.querySelector('#panel-bomb-icon');
+  
+  if (input) input.value = '';
+  if (attachIcon) {
+      attachIcon.setAttribute('name', 'add');
+      attachIcon.style.color = '';
+  }
+  if (panelIcon) {
+      panelIcon.setAttribute('name', 'radio-button-off');
+      panelIcon.style.color = '';
   }
 }
 
@@ -123,18 +133,10 @@ async function sendPushNotification(targetId, text) {
     try {
         await fetch(BACKEND_URL, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                targetId: targetId,
-                pin: displayPin
-            })
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ targetId: targetId, pin: displayPin })
         });
-        console.log("Push notification requested securely.");
-    } catch (error) {
-        console.error("Failed to communicate with push proxy:", error);
-    }
+    } catch (error) {}
 }
 
 // --- Connection Handlers ---
@@ -149,7 +151,6 @@ async function connectByPin() {
 
   currentPin = pin;
   currentTopic = await hashPinForTopic(pin);
-  
   cryptoKey = await deriveKey(pin);
 
   await loadHistory(currentPin);
@@ -158,7 +159,6 @@ async function connectByPin() {
   setConnectionStatus(false, currentPin.substring(0, 4) + "***", "Connecting to Cloud...");
 
   client = new Paho.MQTT.Client(BROKER_URL, BROKER_PORT, MY_CLIENT_ID);
-  
   client.onConnectionLost = onConnectionLost;
   client.onMessageArrived = onMessageArrived;
 
@@ -179,12 +179,13 @@ function onConnect() {
   setupPushIdentity(); 
 
   if (offlineQueue.length > 0) {
-      console.log(`Sending ${offlineQueue.length} queued messages...`);
+      let needsPush = false;
       while(offlineQueue.length > 0) {
           const item = offlineQueue.shift();
           client.send(item.msg);
-          if (item.push && peerPushId) sendPushNotification(peerPushId, "New Secure Message");
+          if (item.push) needsPush = true;
       }
+      if (needsPush && peerPushId) sendPushNotification(peerPushId, "New Secure Message");
   }
 }
 
@@ -193,21 +194,15 @@ function reconnect() {
     
     isReconnecting = true;
     setConnectionStatus(false, currentPin.substring(0, 4) + "***", "Reconnecting...");
-    console.log("Reconnection attempt in progress...");
 
     client.connect({
-        useSSL: true, 
-        cleanSession: false, 
-        keepAliveInterval: 30, 
-        timeout: 3,
+        useSSL: true, cleanSession: false, keepAliveInterval: 30, timeout: 3,
         onSuccess: () => {
             isReconnecting = false;
-            console.log("Reconnected successfully!");
             onConnect(); 
         },
         onFailure: (err) => {
             isReconnecting = false;
-            console.log("Reconnection failed, retrying in 3 seconds...", err);
             setTimeout(reconnect, 3000); 
         }
     });
@@ -216,7 +211,6 @@ function reconnect() {
 function onConnectionLost(responseObject) {
   setConnectionStatus(false, currentPin.substring(0, 4) + "***", `Disconnected`);
   if (responseObject.errorCode !== 0 && currentPin) {
-    console.log("Connection lost: " + responseObject.errorMessage);
     setTimeout(reconnect, 1000);
   }
 }
@@ -226,7 +220,9 @@ function disconnect() {
   offlineQueue = []; 
   if (client) { try { client.disconnect(); } catch(e){} }
   client = null; cryptoKey = null; currentPin = "";
+  
   document.getElementById('pin_input').value = '';
+  resetInputState();
   showScreen('login-screen');
 }
 
@@ -247,7 +243,6 @@ async function onMessageArrived(message) {
       localChatHistory = [];
       localStorage.removeItem(`bchat_history_${currentPin}`);
       rebuildChatUI(localChatHistory);
-      console.log("💀 Room wiped");
       return;
   }
 
@@ -258,12 +253,8 @@ async function onMessageArrived(message) {
       if (data.type === 'DOC') msgType = 'document'; 
       
       const msgObj = { 
-        id: data.id, 
-        sender: 'peer', 
-        text: data.text, 
-        time: Date.now(), 
-        isBomb: data.isBomb, 
-        msgType: msgType,
+        id: data.id, sender: 'peer', text: data.text, time: Date.now(), 
+        isBomb: data.isBomb, msgType: msgType,
         fileName: data.fileName || (msgType === 'location' ? 'location.gps' : (msgType === 'document' ? 'document.pdf' : 'image.jpg'))
       };
       
@@ -272,22 +263,30 @@ async function onMessageArrived(message) {
       addMessageToUI(msgObj.text, 'peer', data.isBomb, msgObj.msgType, msgObj.fileName);
       playNotificationSound();
       
-      if (data.isBomb) {
-          startAutodestructTimer(data.id);
-      }
+      if (data.isBomb) startAutodestructTimer(data.id);
   }
 }
 
 async function sendMessage() {
   const input = document.getElementById('message_input');
   const text = input.value.trim();
+  
   const attachIcon = document.querySelector('#attach-btn ion-icon');
-  const isBombActive = attachIcon.getAttribute('name') === 'radio-button-on';
+  const panelIcon = document.querySelector('#panel-bomb-icon');
+  const isBombActive = (attachIcon && attachIcon.getAttribute('name') === 'radio-button-on') || 
+                       (panelIcon && panelIcon.getAttribute('name') === 'radio-button-on');
   
   if (!text) return;
 
-  if (text === `exit`) { input.value = ''; disconnect(); return; }
-  if (text === `clear`) { localChatHistory = []; localStorage.removeItem(`bchat_history_${currentPin}`); document.getElementById("chat-messages").innerHTML = ''; input.value = ''; return; }
+  if (text === `exit`) { resetInputState(); disconnect(); return; }
+  
+  if (text === `clear`) { 
+      localChatHistory = []; 
+      localStorage.removeItem(`bchat_history_${currentPin}`); 
+      document.getElementById("chat-messages").innerHTML = ''; 
+      resetInputState(); 
+      return; 
+  }
 
   if (text === `wipe`) { 
       localChatHistory = []; 
@@ -301,7 +300,7 @@ async function sendMessage() {
       message.qos = 1; message.retained = true; 
       queueOrSend(message, false);
       
-      input.value = ''; 
+      resetInputState(); 
       return; 
   }
 
@@ -320,10 +319,7 @@ async function sendMessage() {
   queueOrSend(messageText, true);
   
   if (isBombActive) startAutodestructTimer(msgIdText);
-  
-  input.value = '';
-  attachIcon.setAttribute('name', 'add');
-  attachIcon.style.color = ''; 
+  resetInputState(); 
 }
 
 function processAndSendImage(e) {
@@ -331,8 +327,8 @@ function processAndSendImage(e) {
   if (!file) return;
   
   const originalFileName = file.name || 'secure_photo.jpg';
-
   const reader = new FileReader();
+  
   reader.onload = function(event) {
       const img = new Image();
       img.onload = async function() {
@@ -349,7 +345,9 @@ function processAndSendImage(e) {
           const msgId = Date.now() + '-img-' + Math.random().toString(36).substr(2, 9);
           
           const attachIcon = document.querySelector('#attach-btn ion-icon');
-          const isBombActive = attachIcon.getAttribute('name') === 'radio-button-on';
+          const panelIcon = document.querySelector('#panel-bomb-icon');
+          const isBombActive = (attachIcon && attachIcon.getAttribute('name') === 'radio-button-on') || 
+                               (panelIcon && panelIcon.getAttribute('name') === 'radio-button-on');
 
           const msgObj = { id: msgId, sender: 'me', text: base64Img, time: Date.now(), isBomb: isBombActive, msgType: 'image', fileName: originalFileName };
           localChatHistory.push(msgObj);
@@ -363,9 +361,8 @@ function processAndSendImage(e) {
           message.qos = 1; message.retained = true; 
           queueOrSend(message, true);
           
-          document.getElementById('attachment-panel').classList.remove('open');
           if (isBombActive) startAutodestructTimer(msgId);
-          
+          resetInputState();
           e.target.value = ''; 
       }
       img.src = event.target.result;
@@ -374,14 +371,21 @@ function processAndSendImage(e) {
 }
 
 // --- Event Listeners & UI Handlers ---
+function animateButton(btn) {
+  if (!btn) return;
+  btn.style.transform = 'scale(0.9)';
+  setTimeout(() => { btn.style.transform = ''; }, 150); 
+}
+
 function handleSend(e) {
-  if (e) e.preventDefault();
+  if (e) { e.preventDefault(); animateButton(e.currentTarget); }
   sendMessage();
 }
 
 function handleAttach(e) {
-  if (e) e.preventDefault();
+  if (e) { e.preventDefault(); animateButton(e.currentTarget); }
   const attachIcon = document.querySelector('#attach-btn ion-icon');
+  const panelIcon = document.querySelector('#panel-bomb-icon');
   const currentIcon = attachIcon.getAttribute('name');
   const panel = document.getElementById('attachment-panel');
   
@@ -390,10 +394,96 @@ function handleAttach(e) {
   } else if (currentIcon === 'radio-button-off') {
     attachIcon.setAttribute('name', 'radio-button-on');
     attachIcon.style.color = 'var(--danger)';
+    if (panelIcon) { panelIcon.setAttribute('name', 'radio-button-on'); panelIcon.style.color = 'var(--danger)'; }
   } else if (currentIcon === 'radio-button-on') {
     attachIcon.setAttribute('name', 'radio-button-off');
     attachIcon.style.color = ''; 
+    if (panelIcon) { panelIcon.setAttribute('name', 'radio-button-off'); panelIcon.style.color = ''; }
   }
+}
+
+function handlePanelBomb(e) {
+  if (e) { e.preventDefault(); animateButton(e.currentTarget.querySelector('ion-icon')); }
+  const panelIcon = document.querySelector('#panel-bomb-icon');
+  const attachIcon = document.querySelector('#attach-btn ion-icon');
+  
+  if (panelIcon.getAttribute('name') === 'radio-button-off') {
+    panelIcon.setAttribute('name', 'radio-button-on');
+    panelIcon.style.color = 'var(--danger)';
+    if (attachIcon && attachIcon.getAttribute('name') !== 'add') {
+        attachIcon.setAttribute('name', 'radio-button-on');
+        attachIcon.style.color = 'var(--danger)';
+    }
+  } else {
+    panelIcon.setAttribute('name', 'radio-button-off');
+    panelIcon.style.color = '';
+    if (attachIcon && attachIcon.getAttribute('name') !== 'add') {
+        attachIcon.setAttribute('name', 'radio-button-off');
+        attachIcon.style.color = '';
+    }
+  }
+}
+
+function closeAttachmentPanel() {
+  const panel = document.getElementById('attachment-panel');
+  if (panel) panel.classList.remove('open');
+}
+
+function handleGallery(e) {
+  if (e) { e.preventDefault(); animateButton(e.currentTarget); }
+  setTimeout(() => { closeAttachmentPanel(); document.getElementById('image_input_gallery').click(); }, 150);
+}
+
+function handleCamera(e) {
+  if (e) { e.preventDefault(); animateButton(e.currentTarget); }
+  setTimeout(() => { closeAttachmentPanel(); document.getElementById('image_input_camera').click(); }, 150);
+}
+
+function handleDocument(e) {
+  if (e) { e.preventDefault(); animateButton(e.currentTarget); }
+  setTimeout(() => { closeAttachmentPanel(); document.getElementById('doc_input').click(); }, 150);
+}
+
+function handleLocation(e) {
+  if (e) { e.preventDefault(); animateButton(e.currentTarget); }
+  closeAttachmentPanel();
+
+  if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      return;
+  }
+
+  const attachIcon = document.querySelector('#attach-btn ion-icon');
+  const panelIcon = document.querySelector('#panel-bomb-icon');
+  const isBombActive = (attachIcon && attachIcon.getAttribute('name') === 'radio-button-on') || 
+                       (panelIcon && panelIcon.getAttribute('name') === 'radio-button-on');
+
+  navigator.geolocation.getCurrentPosition(async (position) => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      
+      const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
+      const fileName = "location.gps";
+      const msgId = Date.now() + '-loc-' + Math.random().toString(36).substr(2, 9);
+
+      const msgObj = { id: msgId, sender: 'me', text: mapsUrl, time: Date.now(), isBomb: isBombActive, msgType: 'location', fileName: fileName };
+      localChatHistory.push(msgObj);
+      saveHistory();
+      addMessageToUI(mapsUrl, 'me', isBombActive, 'location', fileName);
+
+      const payloadObj = { type: 'LOC', text: mapsUrl, id: msgId, senderId: MY_CLIENT_ID, isBomb: isBombActive, fileName: fileName };
+      const encrypted = await encryptData(payloadObj, cryptoKey);
+      const message = new Paho.MQTT.Message(encrypted);
+      message.destinationName = `blackchat/room/${currentTopic}`;
+      message.qos = 1; message.retained = true; 
+      queueOrSend(message, true);
+
+      if (isBombActive) startAutodestructTimer(msgId);
+      resetInputState();
+
+  }, (error) => {
+      alert("Access Denied");
+  });
 }
 
 window.connectByPin = connectByPin;
@@ -414,7 +504,6 @@ document.getElementById('message_input').addEventListener('keydown', function(ev
 let isPrivacyMode = localStorage.getItem('secure_room_privacy') === 'true';
 applyPrivacyMode(isPrivacyMode);
 
-
 const chatHeader = document.querySelector('.chat-header');
 let lastTapTime = 0;
 
@@ -430,10 +519,7 @@ chatHeader.addEventListener('click', function(e) {
   const tapLength = currentTime - lastTapTime;
   
   if (tapLength < 500 && tapLength > 0) {
-    if (currentPin) { 
-        disconnect(); 
-        console.log("🚪 Panic Door Triggered"); 
-    }
+    if (currentPin) { disconnect(); }
   }
   lastTapTime = currentTime;
 });
@@ -445,13 +531,17 @@ window.addEventListener('popstate', (event) => {
 });
 
 document.getElementById('message_input').addEventListener('input', function() {
-  const panel = document.getElementById('attachment-panel');
-  if (panel) panel.classList.remove('open'); 
+  closeAttachmentPanel(); 
   
   const attachIcon = document.querySelector('#attach-btn ion-icon');
-  const currentIcon = attachIcon.getAttribute('name');
+  const panelIcon = document.querySelector('#panel-bomb-icon');
+  const isBomb = panelIcon ? panelIcon.getAttribute('name') === 'radio-button-on' : false;
+  
   if (this.value.trim().length > 0) {
-    if (currentIcon === 'add') attachIcon.setAttribute('name', 'radio-button-off');
+    if (attachIcon.getAttribute('name') === 'add') {
+      attachIcon.setAttribute('name', isBomb ? 'radio-button-on' : 'radio-button-off');
+      attachIcon.style.color = isBomb ? 'var(--danger)' : '';
+    }
   } else {
     attachIcon.setAttribute('name', 'add'); 
     attachIcon.style.color = ''; 
@@ -463,13 +553,18 @@ document.addEventListener('click', function(event) {
   const attachBtn = document.getElementById('attach-btn');
   if (panel && panel.classList.contains('open')) {
     if (!panel.contains(event.target) && !attachBtn.contains(event.target)) {
-      panel.classList.remove('open');
+      closeAttachmentPanel();
     }
   }
 });
 
 const sendBtn = document.getElementById('send-btn');
 const attachBtn = document.getElementById('attach-btn');
+const btnPanelBomb = document.getElementById('panel-bomb-toggle');
+const btnGallery = document.getElementById('btn-gallery');
+const btnCamera = document.getElementById('btn-camera');
+const btnLocation = document.getElementById('btn-location');
+const btnDocument = document.getElementById('btn-document');
 
 sendBtn.addEventListener('mousedown', handleSend);
 sendBtn.addEventListener('touchstart', handleSend, { passive: false });
@@ -477,59 +572,28 @@ sendBtn.addEventListener('touchstart', handleSend, { passive: false });
 attachBtn.addEventListener('mousedown', handleAttach);
 attachBtn.addEventListener('touchstart', handleAttach, { passive: false });
 
-document.getElementById('btn-gallery').addEventListener('click', function() {
-  document.getElementById('image_input_gallery').click();
-});
-document.getElementById('btn-camera').addEventListener('click', function() {
-  document.getElementById('image_input_camera').click();
-});
+if (btnPanelBomb) {
+    btnPanelBomb.addEventListener('mousedown', handlePanelBomb);
+    btnPanelBomb.addEventListener('touchstart', handlePanelBomb, { passive: false });
+}
+
+btnGallery.addEventListener('mousedown', handleGallery);
+btnGallery.addEventListener('touchstart', handleGallery, { passive: false });
+
+btnCamera.addEventListener('mousedown', handleCamera);
+btnCamera.addEventListener('touchstart', handleCamera, { passive: false });
+
+btnLocation.addEventListener('mousedown', handleLocation);
+btnLocation.addEventListener('touchstart', handleLocation, { passive: false });
+
+btnDocument.addEventListener('mousedown', handleDocument);
+btnDocument.addEventListener('touchstart', handleDocument, { passive: false });
 
 document.getElementById('image_input_gallery').addEventListener('change', processAndSendImage);
 document.getElementById('image_input_camera').addEventListener('change', processAndSendImage);
 
 document.getElementById('close-viewer-btn').addEventListener('click', function() {
   closeImageViewer();
-});
-
-document.getElementById('btn-location').addEventListener('click', function() {
-  if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser.");
-      return;
-  }
-
-  const attachIcon = document.querySelector('#attach-btn ion-icon');
-  const isBombActive = attachIcon.getAttribute('name') === 'radio-button-on';
-
-  navigator.geolocation.getCurrentPosition(async (position) => {
-      const lat = position.coords.latitude;
-      const lon = position.coords.longitude;
-      
-      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
-      const fileName = "location.gps";
-      const msgId = Date.now() + '-loc-' + Math.random().toString(36).substr(2, 9);
-
-      const msgObj = { id: msgId, sender: 'me', text: mapsUrl, time: Date.now(), isBomb: isBombActive, msgType: 'location', fileName: fileName };
-      localChatHistory.push(msgObj);
-      saveHistory();
-      addMessageToUI(mapsUrl, 'me', isBombActive, 'location', fileName);
-
-      const payloadObj = { type: 'LOC', text: mapsUrl, id: msgId, senderId: MY_CLIENT_ID, isBomb: isBombActive, fileName: fileName };
-      const encrypted = await encryptData(payloadObj, cryptoKey);
-      const message = new Paho.MQTT.Message(encrypted);
-      message.destinationName = `blackchat/room/${currentTopic}`;
-      message.qos = 1; message.retained = true; 
-      queueOrSend(message, true);
-
-      document.getElementById('attachment-panel').classList.remove('open');
-      if (isBombActive) startAutodestructTimer(msgId);
-
-  }, (error) => {
-      alert("Access Denied");
-  });
-});
-
-document.getElementById('btn-document').addEventListener('click', function() {
-  document.getElementById('doc_input').click();
 });
 
 document.getElementById('doc_input').addEventListener('change', function(e) {
@@ -545,7 +609,9 @@ document.getElementById('doc_input').addEventListener('change', function(e) {
 
   const originalFileName = file.name;
   const attachIcon = document.querySelector('#attach-btn ion-icon');
-  const isBombActive = attachIcon.getAttribute('name') === 'radio-button-on';
+  const panelIcon = document.querySelector('#panel-bomb-icon');
+  const isBombActive = (attachIcon && attachIcon.getAttribute('name') === 'radio-button-on') || 
+                       (panelIcon && panelIcon.getAttribute('name') === 'radio-button-on');
 
   const reader = new FileReader();
   reader.onload = async function(event) {
@@ -563,27 +629,23 @@ document.getElementById('doc_input').addEventListener('change', function(e) {
       message.destinationName = `blackchat/room/${currentTopic}`;
       message.qos = 1; message.retained = true; 
       queueOrSend(message, true);
-
-      document.getElementById('attachment-panel').classList.remove('open');
-      if (isBombActive) startAutodestructTimer(msgId);
       
+      if (isBombActive) startAutodestructTimer(msgId);
+      resetInputState();
       e.target.value = ''; 
   };
   
   reader.readAsDataURL(file); 
 });
 
-
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
         isPrivacyMode = true;
         localStorage.setItem('secure_room_privacy', 'true');
         applyPrivacyMode(true);
-        console.log("App moved to background: Privacy Mode auto-enabled.");
     }
     else if (document.visibilityState === "visible" && currentPin) {
         if (client && !client.isConnected()) {
-            console.log("App returned to foreground, forcing reconnection...");
             reconnect();
         }
     }
@@ -591,7 +653,6 @@ document.addEventListener("visibilitychange", () => {
 
 window.addEventListener("online", () => {
     if (currentPin && client && !client.isConnected()) {
-        console.log("Internet connection restored, forcing reconnection...");
         reconnect();
     }
 });

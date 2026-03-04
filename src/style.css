@@ -347,9 +347,10 @@ button:hover {
   100% { opacity: 0.3; transform: scale(0.95); }
 }
 
-
+/* 1. Il contenitore del pannello (Ora può andare a capo grazie a flex-wrap) */
 #attachment-panel {
   display: flex;
+  flex-wrap: wrap; /* Fondamentale! Permette alla barra di stare sopra e alle icone sotto */
   justify-content: space-between;
   align-items: center; 
   padding: 0 1.5rem;
@@ -364,17 +365,30 @@ button:hover {
   transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.1); 
 }
 
+/* 2. Lo stato aperto (Aumentato lo spazio in altezza e aggiustato il padding) */
 #attachment-panel.open {
-  max-height: 120px;
+  max-height: 250px; /* Aumentato da 120px a 250px per far respirare i contenuti */
   opacity: 1;
-  padding: 1rem 0.8rem;
+  padding: 0 0.8rem 1rem 0.8rem; /* Rimosso il padding top per far aderire bene la barra */
   background-color: #171717;
   margin: 0.4rem 1.5rem;
   border-radius: var(--bord-rads);
   transform: scale(1) translate(0, 0);
 }
 
+/* 3. La barra di autodistruzione */
+.panel-bomb-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0.8rem; 
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 15px; /* Spinge le icone verso il basso */
+  cursor: pointer;
+  width: 100%; /* Si prende tutta la prima riga */
+}
 
+/* (Lascia invariati .panel-bomb-text, .panel-bomb-icon e il resto del codice) */
 #attachment-panel {
   display: flex;
   justify-content: space-between;
@@ -391,6 +405,22 @@ button:hover {
   transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.1); 
 }
 
+
+.panel-bomb-text {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.panel-bomb-icon {
+  font-size: 1.8rem;
+  color: var(--text-muted);
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.panel-bomb-toggle:active .panel-bomb-icon {
+  transform: scale(0.85);
+}
 
 .attach-item {
   flex: 1;
