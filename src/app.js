@@ -11,6 +11,7 @@ let currentTopic = "";
 let peerPushId = null; 
 let offlineQueue = [];
 let isReconnecting = false;
+let isPrivacyMode = false;
 
 // --- Initialization ---
 let storedClientId = localStorage.getItem("mqtt_client_id");
@@ -501,7 +502,7 @@ document.getElementById('message_input').addEventListener('keydown', function(ev
   if (event.key==='Enter') sendMessage();
 });
 
-let isPrivacyMode = localStorage.getItem('secure_room_privacy') === 'true';
+
 applyPrivacyMode(isPrivacyMode);
 
 const chatHeader = document.querySelector('.chat-header');
