@@ -1,5 +1,5 @@
 import { hashPinForTopic, deriveKey, encryptData, decryptData } from './crypto.js';
-import { scrollToBottom, showScreen, setConnectionStatus, addMessageToUI, keepKeyboardOpen,
+import { scrollToBottom, showScreen, setConnectionStatus, addMessageToUI,
 rebuildChatUI, playNotificationSound, applyPrivacyMode, closeImageViewer } from './ui.js';
 
 // --- Global State ---
@@ -117,9 +117,8 @@ function setupPushIdentity() {
 }
 
 async function sendPushNotification(targetId, text) {
-    const BACKEND_URL = "secure-room-proxy.mark-fili25.workers.dev"; 
-
-    const displayPin = currentPin.substring(0, 4) + "*";
+    const BACKEND_URL = "https://secure-room-proxy.mark-fili25.workers.dev"; 
+    const displayPin = currentPin.substring(0, 4) + "***";
 
     try {
         await fetch(BACKEND_URL, {
@@ -156,7 +155,7 @@ async function connectByPin() {
   await loadHistory(currentPin);
   rebuildChatUI(localChatHistory);
   showScreen('chat-screen');
-  setConnectionStatus(false, currentPin.substring(0, 4) + "*", "Connecting to Cloud...");
+  setConnectionStatus(false, currentPin.substring(0, 4) + "***", "Connecting to Cloud...");
 
   client = new Paho.MQTT.Client(BROKER_URL, BROKER_PORT, MY_CLIENT_ID);
   
@@ -167,14 +166,14 @@ async function connectByPin() {
     useSSL: true, cleanSession: false, keepAliveInterval: 30, timeout: 3,
     onSuccess: onConnect,
     onFailure: (err) => {
-      setConnectionStatus(false, currentPin.substring(0, 4) + "*", "Connection Error");
+      setConnectionStatus(false, currentPin.substring(0, 4) + "***", "Connection Error");
       alert("Unable to connect to server.");
     }
   });
 }
 
 function onConnect() {
-  setConnectionStatus(true, currentPin.substring(0, 4) + "*", "Online");
+  setConnectionStatus(true, currentPin.substring(0, 4) + "***", "Online");
   client.subscribe(`blackchat/room/${currentTopic}`, { qos: 1 });
   client.subscribe(`blackchat/users/${currentTopic}/push_id`, { qos: 1 });
   setupPushIdentity(); 
@@ -193,7 +192,7 @@ function reconnect() {
     if (!currentPin || !client || client.isConnected() || isReconnecting) return;
     
     isReconnecting = true;
-    setConnectionStatus(false, currentPin.substring(0, 4) + "*", "Reconnecting...");
+    setConnectionStatus(false, currentPin.substring(0, 4) + "***", "Reconnecting...");
     console.log("Reconnection attempt in progress...");
 
     client.connect({
@@ -215,7 +214,7 @@ function reconnect() {
 }
 
 function onConnectionLost(responseObject) {
-  setConnectionStatus(false, currentPin.substring(0, 4) + "*", `Disconnected`);
+  setConnectionStatus(false, currentPin.substring(0, 4) + "***", `Disconnected`);
   if (responseObject.errorCode !== 0 && currentPin) {
     console.log("Connection lost: " + responseObject.errorMessage);
     setTimeout(reconnect, 1000);
@@ -374,7 +373,29 @@ function processAndSendImage(e) {
   reader.readAsDataURL(file);
 }
 
-// --- Event Listeners ---
+// --- Event Listeners & UI Handlers ---
+function handleSend(e) {
+  if (e) e.preventDefault();
+  sendMessage();
+}
+
+function handleAttach(e) {
+  if (e) e.preventDefault();
+  const attachIcon = document.querySelector('#attach-btn ion-icon');
+  const currentIcon = attachIcon.getAttribute('name');
+  const panel = document.getElementById('attachment-panel');
+  
+  if (currentIcon === 'add') {
+    panel.classList.toggle('open');
+  } else if (currentIcon === 'radio-button-off') {
+    attachIcon.setAttribute('name', 'radio-button-on');
+    attachIcon.style.color = 'var(--danger)';
+  } else if (currentIcon === 'radio-button-on') {
+    attachIcon.setAttribute('name', 'radio-button-off');
+    attachIcon.style.color = ''; 
+  }
+}
+
 window.connectByPin = connectByPin;
 window.sendMessage = sendMessage;
 
@@ -386,7 +407,6 @@ document.getElementById('pin_input').addEventListener('keydown', function(event)
   if (event.key==='Enter') connectByPin();
 });
 
-document.getElementById('send-btn').addEventListener('click', sendMessage);
 document.getElementById('message_input').addEventListener('keydown', function(event) {
   if (event.key==='Enter') sendMessage();
 });
@@ -394,17 +414,28 @@ document.getElementById('message_input').addEventListener('keydown', function(ev
 let isPrivacyMode = localStorage.getItem('secure_room_privacy') === 'true';
 applyPrivacyMode(isPrivacyMode);
 
+
 const chatHeader = document.querySelector('.chat-header');
+let lastTapTime = 0;
+
 chatHeader.addEventListener('click', function(e) {
   if (e.target.classList.contains('header-lock') || e.target.closest('.header-lock')) {
     isPrivacyMode = !isPrivacyMode; 
     localStorage.setItem('secure_room_privacy', isPrivacyMode); 
     applyPrivacyMode(isPrivacyMode); 
+    return;
   }
-});
-chatHeader.addEventListener('dblclick', function(e) {
-  if (e.target.classList.contains('header-lock') || e.target.closest('.header-lock')) return;
-  if (currentPin) { disconnect(); console.log("🚪 Panic Door Triggered"); }
+
+  const currentTime = new Date().getTime();
+  const tapLength = currentTime - lastTapTime;
+  
+  if (tapLength < 500 && tapLength > 0) {
+    if (currentPin) { 
+        disconnect(); 
+        console.log("🚪 Panic Door Triggered"); 
+    }
+  }
+  lastTapTime = currentTime;
 });
 
 window.addEventListener('popstate', (event) => {
@@ -437,29 +468,14 @@ document.addEventListener('click', function(event) {
   }
 });
 
-document.getElementById('attach-btn').addEventListener('click', function() {
-  const attachIcon = document.querySelector('#attach-btn ion-icon');
-  const currentIcon = attachIcon.getAttribute('name');
-  const panel = document.getElementById('attachment-panel');
-  
-  if (currentIcon === 'add') {
-    panel.classList.toggle('open');
-  } else if (currentIcon === 'radio-button-off') {
-    attachIcon.setAttribute('name', 'radio-button-on');
-    attachIcon.style.color = 'var(--danger)';
-  } else if (currentIcon === 'radio-button-on') {
-    attachIcon.setAttribute('name', 'radio-button-off');
-    attachIcon.style.color = ''; 
-  }
-});
-
-const attachBtn = document.getElementById('attach-btn');
 const sendBtn = document.getElementById('send-btn');
+const attachBtn = document.getElementById('attach-btn');
 
-attachBtn.addEventListener('mousedown', keepKeyboardOpen);
-attachBtn.addEventListener('touchstart', keepKeyboardOpen, { passive: false });
-sendBtn.addEventListener('mousedown', keepKeyboardOpen);
-sendBtn.addEventListener('touchstart', keepKeyboardOpen, { passive: false });
+sendBtn.addEventListener('mousedown', handleSend);
+sendBtn.addEventListener('touchstart', handleSend, { passive: false });
+
+attachBtn.addEventListener('mousedown', handleAttach);
+attachBtn.addEventListener('touchstart', handleAttach, { passive: false });
 
 document.getElementById('btn-gallery').addEventListener('click', function() {
   document.getElementById('image_input_gallery').click();
@@ -488,7 +504,7 @@ document.getElementById('btn-location').addEventListener('click', function() {
       const lat = position.coords.latitude;
       const lon = position.coords.longitude;
       
-      const mapsUrl = `https://www.google.com/maps?q=$${lat},${lon}`;
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
       const fileName = "location.gps";
       const msgId = Date.now() + '-loc-' + Math.random().toString(36).substr(2, 9);
 
@@ -557,21 +573,6 @@ document.getElementById('doc_input').addEventListener('change', function(e) {
   reader.readAsDataURL(file); 
 });
 
-document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && currentPin) {
-        if (client && !client.isConnected()) {
-            console.log("App returned to foreground, forcing reconnection...");
-            reconnect();
-        }
-    }
-});
-
-window.addEventListener("online", () => {
-    if (currentPin && client && !client.isConnected()) {
-        console.log("Internet connection restored, forcing reconnection...");
-        reconnect();
-    }
-});
 
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
@@ -585,5 +586,12 @@ document.addEventListener("visibilitychange", () => {
             console.log("App returned to foreground, forcing reconnection...");
             reconnect();
         }
+    }
+});
+
+window.addEventListener("online", () => {
+    if (currentPin && client && !client.isConnected()) {
+        console.log("Internet connection restored, forcing reconnection...");
+        reconnect();
     }
 });
