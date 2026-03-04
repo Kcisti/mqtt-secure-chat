@@ -146,7 +146,22 @@ async function connectByPin() {
   if (!pin) return;
 
   if (pin.length < 8) {
-      alert("SECURITY ALERT: Passphrase must be at least 8 characters long.");
+      const connectBtn = document.getElementById('connect-btn');
+      const loginStatus = document.getElementById('status-text');
+
+      if (loginStatus) {
+          loginStatus.innerText = "SECURITY ALERT: Passphrase must be at least 8 characters long.";
+      }
+
+      if (connectBtn) {
+          connectBtn.classList.remove('shake-error'); 
+          void connectBtn.offsetWidth; 
+          connectBtn.classList.add('shake-error');
+          
+          setTimeout(() => {
+              connectBtn.classList.remove('shake-error');
+          }, 400);
+      }
       return;
   }
 
@@ -177,7 +192,7 @@ function onConnect() {
   setConnectionStatus(true, currentPin.substring(0, 4) + "***", "Online");
   client.subscribe(`blackchat/room/${currentTopic}`, { qos: 1 });
   client.subscribe(`blackchat/users/${currentTopic}/push_id`, { qos: 1 });
-  setupPushIdentity(); 
+  setupPushIdentity();
 
   if (offlineQueue.length > 0) {
       let needsPush = false;
@@ -186,6 +201,7 @@ function onConnect() {
           client.send(item.msg);
           if (item.push) needsPush = true;
       }
+      
       if (needsPush && peerPushId) sendPushNotification(peerPushId, "New Secure Message");
   }
 }
@@ -224,6 +240,20 @@ function disconnect() {
   
   document.getElementById('pin_input').value = '';
   resetInputState();
+
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Disconnected."; }, 500);
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Disconnected.."; }, 800);
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Disconnected..."; }, 1100);
+
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Chat Deletion."; }, 1400);
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Chat Deletion.."; }, 1800);
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Chat Deletion..."; }, 2200);
+
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Clearing Data."; }, 2500);
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Clearing Data.."; }, 2800);
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Clearing Data..."; }, 3100);
+  setTimeout(() => { document.getElementById('status-text').innerHTML = ""; }, 3400);
+
   showScreen('login-screen');
 }
 
@@ -652,8 +682,22 @@ document.addEventListener("visibilitychange", () => {
     }
 });
 
+
+document.getElementById('pin_input').addEventListener('input', function() {
+    const loginStatus = document.getElementById('status-text');
+    if (loginStatus) loginStatus.innerText = "";
+});
+
 window.addEventListener("online", () => {
     if (currentPin && client && !client.isConnected()) {
         reconnect();
     }
+});
+
+window.addEventListener('load', () => {
+    const overlay = document.getElementById('transition-overlay');
+    setTimeout(() => {
+        overlay.classList.remove('active');
+    }, 1500);
+
 });

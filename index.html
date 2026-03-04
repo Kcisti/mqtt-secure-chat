@@ -39,13 +39,15 @@
 
 <body>
   <div id="app-container">
-    
+    <div id="transition-overlay" class="transition-overlay active">
+      <img src="chat-app-icon-t.png" class="transition-padlock"></img>
+    </div>
     <div id="login-screen" class="screen active">
       <div class="login-card">
         <h1>Secure Room</h1>
         <p>Enter a Secret PIN to join a secure, encrypted cloud room.</p>
         <div class="input-group">
-          <input type="search" id="pin_input" placeholder="E.g. 1234" 
+          <input type="search" id="pin_input" placeholder="E.g. 1234-5678" 
           autocomplete="off" autocorrect="off" autocapitalize="off"
           spellcheck="false" data-lpignore="true">
           <button id="connect-btn" >Connect</button>

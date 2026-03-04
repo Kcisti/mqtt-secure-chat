@@ -347,10 +347,10 @@ button:hover {
   100% { opacity: 0.3; transform: scale(0.95); }
 }
 
-/* 1. Il contenitore del pannello (Ora può andare a capo grazie a flex-wrap) */
+
 #attachment-panel {
   display: flex;
-  flex-wrap: wrap; /* Fondamentale! Permette alla barra di stare sopra e alle icone sotto */
+  flex-wrap: wrap; 
   justify-content: space-between;
   align-items: center; 
   padding: 0 1.5rem;
@@ -365,30 +365,27 @@ button:hover {
   transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.1); 
 }
 
-/* 2. Lo stato aperto (Aumentato lo spazio in altezza e aggiustato il padding) */
 #attachment-panel.open {
-  max-height: 250px; /* Aumentato da 120px a 250px per far respirare i contenuti */
+  max-height: 250px; 
   opacity: 1;
-  padding: 0 0.8rem 1rem 0.8rem; /* Rimosso il padding top per far aderire bene la barra */
+  padding: 0 0.8rem 1rem 0.8rem;
   background-color: #171717;
   margin: 0.4rem 1.5rem;
   border-radius: var(--bord-rads);
   transform: scale(1) translate(0, 0);
 }
 
-/* 3. La barra di autodistruzione */
 .panel-bomb-toggle {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 0.8rem; 
   border-bottom: 1px solid var(--border-color);
-  margin-bottom: 15px; /* Spinge le icone verso il basso */
+  margin-bottom: 15px;
   cursor: pointer;
-  width: 100%; /* Si prende tutta la prima riga */
+  width: 100%; 
 }
 
-/* (Lascia invariati .panel-bomb-text, .panel-bomb-icon e il resto del codice) */
 #attachment-panel {
   display: flex;
   justify-content: space-between;
@@ -520,4 +517,68 @@ button:hover {
   max-height: 100%;
   object-fit: contain; 
   border-radius: 8px;
+}
+
+
+.transition-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #000000;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+
+.transition-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.transition-padlock {
+  font-size: 8.5rem;
+  max-width: 18%;
+  color: var(--text-muted); 
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+
+.transition-overlay.active .transition-padlock {
+  animation: padlockGlow 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+
+@keyframes padlockGlow {
+  0% { 
+    opacity: 0; 
+    transform: scale(0.5); 
+    filter: drop-shadow(0 0 0px transparent);
+  }
+  50% { 
+    opacity: 1; 
+    transform: scale(1.1); 
+    filter: drop-shadow(0 0 15px rgba(168, 168, 168, 0.4));
+  }
+  100% { 
+    opacity: 1; 
+    transform: scale(1); 
+    filter: drop-shadow(0 0 8px rgba(168, 168, 168, 0.8));
+  }
+}
+
+@keyframes shakeX {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.shake-error {
+  animation: shakeX 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
