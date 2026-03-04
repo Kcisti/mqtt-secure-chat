@@ -24,11 +24,6 @@ const BROKER_URL = "broker.emqx.io";
 const BROKER_PORT = 8084; 
 
 // --- Helpers ---
-function saveHistory() {
-  if (!currentPin) return;
-  localStorage.setItem(`bchat_history_${currentPin}`, JSON.stringify(localChatHistory));
-}
-
 function messageExists(id) {
   return localChatHistory.some(m => m.id === id);
 }
@@ -52,27 +47,49 @@ function startAutodestructTimer(msgId, delay = 10000) {
   }, delay); 
 }
 
-function loadHistory(pin) {
+async function saveHistory() {
+  if (!currentPin || !cryptoKey) return;
+  try {
+      const encryptedData = await encryptData(localChatHistory, cryptoKey);
+      localStorage.setItem(`bchat_history_${currentPin}`, encryptedData);
+  } catch (error) {
+      console.error("Failed to encrypt local history:", error);
+  }
+}
+
+async function loadHistory(pin) {
   const saved = localStorage.getItem(`bchat_history_${pin}`);
   if (saved) {
     try { 
-        localChatHistory = JSON.parse(saved); 
-        const now = Date.now();
-        localChatHistory = localChatHistory.filter(msg => {
-            if (msg.isBomb) {
-                const timePassed = now - msg.time;
-                if (timePassed < 10000) {
-                    startAutodestructTimer(msg.id, 10000 - timePassed);
-                    return true; 
-                } else {
-                    return false; 
+        const decryptedArray = await decryptData(saved, cryptoKey);
+        
+        if (decryptedArray && Array.isArray(decryptedArray)) {
+            localChatHistory = decryptedArray; 
+            const now = Date.now();
+            
+            localChatHistory = localChatHistory.filter(msg => {
+                if (msg.isBomb) {
+                    const timePassed = now - msg.time;
+                    if (timePassed < 10000) {
+                        startAutodestructTimer(msg.id, 10000 - timePassed);
+                        return true; 
+                    } else {
+                        return false; 
+                    }
                 }
-            }
-            return true;
-        });
-        saveHistory();
-    } catch (e) { localChatHistory = []; }
-  } else { localChatHistory = []; }
+                return true;
+            });
+            saveHistory(); 
+        } else {
+            localChatHistory = [];
+        }
+    } catch (e) { 
+        console.warn("Could not decrypt history. Starting fresh.");
+        localChatHistory = []; 
+    }
+  } else { 
+      localChatHistory = []; 
+  }
 }
 
 // --- Push Notifications ---
@@ -124,15 +141,21 @@ async function connectByPin() {
   const pin = document.getElementById('pin_input').value.trim();
   if (!pin) return;
 
+  if (pin.length < 8) {
+      alert("SECURITY ALERT: Passphrase must be at least 8 characters long.");
+      return;
+  }
+
   currentPin = pin;
   currentTopic = await hashPinForTopic(pin);
+  
+  cryptoKey = await deriveKey(pin);
 
-  loadHistory(currentPin);
+  await loadHistory(currentPin);
   rebuildChatUI(localChatHistory);
   showScreen('chat-screen');
   setConnectionStatus(false, currentPin, "Connecting to Cloud...");
 
-  cryptoKey = await deriveKey(pin);
   client = new Paho.MQTT.Client(BROKER_URL, BROKER_PORT, MY_CLIENT_ID);
   
   client.onConnectionLost = onConnectionLost;
@@ -545,5 +568,20 @@ window.addEventListener("online", () => {
     if (currentPin && client && !client.isConnected()) {
         console.log("Internet connection restored, forcing reconnection...");
         reconnect();
+    }
+});
+
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+        isPrivacyMode = true;
+        localStorage.setItem('secure_room_privacy', 'true');
+        applyPrivacyMode(true);
+        console.log("App moved to background: Privacy Mode auto-enabled.");
+    }
+    else if (document.visibilityState === "visible" && currentPin) {
+        if (client && !client.isConnected()) {
+            console.log("App returned to foreground, forcing reconnection...");
+            reconnect();
+        }
     }
 });
