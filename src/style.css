@@ -582,3 +582,19 @@ button:hover {
 .shake-error {
   animation: shakeX 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
+
+@keyframes cameraFocus {
+  0% {
+    filter: blur(15px);
+    opacity: 0;
+  }
+  100% {
+    filter: blur(0px);
+    opacity: 1;
+
+  }
+}
+
+.chat-focus-in {
+  animation: cameraFocus 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}

@@ -171,6 +171,12 @@ async function connectByPin() {
 
   await loadHistory(currentPin);
   rebuildChatUI(localChatHistory);
+
+  const chatScreen = document.getElementById('chat-screen');
+  chatScreen.classList.remove('chat-focus-in'); // Pulisce memorie di vecchie animazioni
+  void chatScreen.offsetWidth; // Trucco JS per riavviare l'animazione da zero
+  chatScreen.classList.add('chat-focus-in');
+
   showScreen('chat-screen');
   setConnectionStatus(false, currentPin.substring(0, 4) + "***", "Connecting to Cloud...");
 
@@ -255,6 +261,7 @@ function disconnect() {
   setTimeout(() => { document.getElementById('status-text').innerHTML = ""; }, 3400);
 
   showScreen('login-screen');
+  document.getElementById('chat-screen').classList.remove('chat-focus-in');
 }
 
 // --- Message Handlers ---
