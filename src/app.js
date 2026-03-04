@@ -1,14 +1,18 @@
 import { hashPinForTopic, deriveKey, encryptData, decryptData } from './crypto.js';
-import { scrollToBottom, showScreen, setConnectionStatus, addMessageToUI,
+import { scrollToBottom, showScreen, setConnectionStatus, addMessageToUI, keepKeyboardOpen,
 rebuildChatUI, playNotificationSound, applyPrivacyMode, closeImageViewer } from './ui.js';
 
+// --- Global State ---
 let client = null;
 let cryptoKey = null;
 let localChatHistory = []; 
 let currentPin = ""; 
 let currentTopic = "";
 let peerPushId = null; 
+let offlineQueue = [];
+let isReconnecting = false;
 
+// --- Initialization ---
 let storedClientId = localStorage.getItem("mqtt_client_id");
 if (!storedClientId) {
   storedClientId = "bc_user_" + Date.now() + "_" + Math.random().toString(16).substr(2, 8);
@@ -19,11 +23,7 @@ const MY_CLIENT_ID = storedClientId;
 const BROKER_URL = "broker.emqx.io"; 
 const BROKER_PORT = 8084; 
 
-const ONESIGNAL_APP_ID = "fbcbc6a0-8e00-4bd6-b389-c2fc6676ece2";
-const KEY_PART_ONE = "os_v2_app_7pf4nieoabf5nm4jyl6gm5xm4khjeftawmeujg4bcc";
-const KEY_PART_TWO = "iajbzlrtt5czv2ab6cpqovmyhoacgaxesmfqiosacee7kvjim3ieoy7d2no5i";
-const ONESIGNAL_API_KEY = KEY_PART_ONE + KEY_PART_TWO; 
-
+// --- Helpers ---
 function saveHistory() {
   if (!currentPin) return;
   localStorage.setItem(`bchat_history_${currentPin}`, JSON.stringify(localChatHistory));
@@ -33,6 +33,49 @@ function messageExists(id) {
   return localChatHistory.some(m => m.id === id);
 }
 
+function queueOrSend(message, requiresPush = false) {
+    if (client && client.isConnected()) {
+        client.send(message);
+        if (requiresPush && peerPushId) sendPushNotification(peerPushId, "New Secure Message");
+    } else {
+        console.log("Client offline. Message added to queue.");
+        offlineQueue.push({ msg: message, push: requiresPush });
+    }
+}
+
+function startAutodestructTimer(msgId, delay = 10000) {
+  setTimeout(() => {
+      localChatHistory = localChatHistory.filter(m => m.id !== msgId);
+      saveHistory(); 
+      rebuildChatUI(localChatHistory); 
+      console.log(`💥 Message ${msgId} destroyed!`);
+  }, delay); 
+}
+
+function loadHistory(pin) {
+  const saved = localStorage.getItem(`bchat_history_${pin}`);
+  if (saved) {
+    try { 
+        localChatHistory = JSON.parse(saved); 
+        const now = Date.now();
+        localChatHistory = localChatHistory.filter(msg => {
+            if (msg.isBomb) {
+                const timePassed = now - msg.time;
+                if (timePassed < 10000) {
+                    startAutodestructTimer(msg.id, 10000 - timePassed);
+                    return true; 
+                } else {
+                    return false; 
+                }
+            }
+            return true;
+        });
+        saveHistory();
+    } catch (e) { localChatHistory = []; }
+  } else { localChatHistory = []; }
+}
+
+// --- Push Notifications ---
 function setupPushIdentity() {
     if (window.OneSignalDeferred) {
         window.OneSignalDeferred.push(function(OneSignal) {
@@ -43,9 +86,7 @@ function setupPushIdentity() {
                 const message = new Paho.MQTT.Message(payload);
                 message.destinationName = pushTopic;
                 message.retained = true;
-                if (client && client.isConnected()) {
-                     client.send(message);
-                }
+                queueOrSend(message, false);
             };
             const currentId = OneSignal.User.PushSubscription.id;
             if (currentId) broadcastId(currentId);
@@ -58,23 +99,27 @@ function setupPushIdentity() {
     }
 }
 
-function sendPushNotification(targetId, text) {
-    const headers = {
-        "Content-Type": "application/json; charset=utf-8",
-        "Authorization": "Basic " + ONESIGNAL_API_KEY
-    };
-    const data = {
-        app_id: ONESIGNAL_APP_ID,
-        include_player_ids: [targetId],
-        headings: { "en": `Secure Room ${currentPin}` },
-        contents: { "en": `New Secure Message` }, 
-        url: "https://secure-room.me" 
-    };
-    fetch("https://onesignal.com/api/v1/notifications", {
-        method: "POST", headers: headers, body: JSON.stringify(data)
-    });
+async function sendPushNotification(targetId, text) {
+    const BACKEND_URL = "secure-room-proxy.mark-fili25.workers.dev"; 
+
+    try {
+        await fetch(BACKEND_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                targetId: targetId,
+                pin: currentPin
+            })
+        });
+        console.log("Push notification requested securely.");
+    } catch (error) {
+        console.error("Failed to communicate with push proxy:", error);
+    }
 }
 
+// --- Connection Handlers ---
 async function connectByPin() {
   const pin = document.getElementById('pin_input').value.trim();
   if (!pin) return;
@@ -108,53 +153,60 @@ function onConnect() {
   client.subscribe(`blackchat/room/${currentTopic}`, { qos: 1 });
   client.subscribe(`blackchat/users/${currentTopic}/push_id`, { qos: 1 });
   setupPushIdentity(); 
-}
 
-function onConnectionLost(responseObject) {
-  setConnectionStatus(false,currentPin, `Disconnected`);
-  if (responseObject.errorCode !== 0) {
-    console.log("Connection lost: " + responseObject.errorMessage);
-    setTimeout(() => {
-        if(currentPin) {
-            console.log("Reconnecting...");
-            client.connect({onSuccess: onConnect, useSSL: true, cleanSession: false});
-        }
-    }, 2000);
+  if (offlineQueue.length > 0) {
+      console.log(`Sending ${offlineQueue.length} queued messages...`);
+      while(offlineQueue.length > 0) {
+          const item = offlineQueue.shift();
+          client.send(item.msg);
+          if (item.push && peerPushId) sendPushNotification(peerPushId, "New Secure Message");
+      }
   }
 }
 
-function startAutodestructTimer(msgId, delay = 10000) {
-  setTimeout(() => {
-      localChatHistory = localChatHistory.filter(m => m.id !== msgId);
-      saveHistory(); 
-      rebuildChatUI(localChatHistory); 
-      console.log(`💥 Messaggio ${msgId} autodistrutto!`);
-  }, delay); 
+function reconnect() {
+    if (!currentPin || !client || client.isConnected() || isReconnecting) return;
+    
+    isReconnecting = true;
+    setConnectionStatus(false, currentPin, "Reconnecting...");
+    console.log("Reconnection attempt in progress...");
+
+    client.connect({
+        useSSL: true, 
+        cleanSession: false, 
+        keepAliveInterval: 30, 
+        timeout: 3,
+        onSuccess: () => {
+            isReconnecting = false;
+            console.log("Reconnected successfully!");
+            onConnect(); 
+        },
+        onFailure: (err) => {
+            isReconnecting = false;
+            console.log("Reconnection failed, retrying in 3 seconds...", err);
+            setTimeout(reconnect, 3000); 
+        }
+    });
 }
 
-function loadHistory(pin) {
-  const saved = localStorage.getItem(`bchat_history_${pin}`);
-  if (saved) {
-    try { 
-        localChatHistory = JSON.parse(saved); 
-        const now = Date.now();
-        localChatHistory = localChatHistory.filter(msg => {
-            if (msg.isBomb) {
-                const timePassed = now - msg.time;
-                if (timePassed < 10000) {
-                    startAutodestructTimer(msg.id, 10000 - timePassed);
-                    return true; 
-                } else {
-                    return false; 
-                }
-            }
-            return true;
-        });
-        saveHistory();
-    } catch (e) { localChatHistory = []; }
-  } else { localChatHistory = []; }
+function onConnectionLost(responseObject) {
+  setConnectionStatus(false, currentPin, `Disconnected`);
+  if (responseObject.errorCode !== 0 && currentPin) {
+    console.log("Connection lost: " + responseObject.errorMessage);
+    setTimeout(reconnect, 1000);
+  }
 }
 
+function disconnect() {
+  isReconnecting = false;
+  offlineQueue = []; 
+  if (client) { try { client.disconnect(); } catch(e){} }
+  client = null; cryptoKey = null; currentPin = "";
+  document.getElementById('pin_input').value = '';
+  showScreen('login-screen');
+}
+
+// --- Message Handlers ---
 async function onMessageArrived(message) {
   if (message.destinationName.includes("push_id")) {
     try {
@@ -171,7 +223,7 @@ async function onMessageArrived(message) {
       localChatHistory = [];
       localStorage.removeItem(`bchat_history_${currentPin}`);
       rebuildChatUI(localChatHistory);
-      console.log("💀");
+      console.log("💀 Room wiped");
       return;
   }
 
@@ -202,7 +254,6 @@ async function onMessageArrived(message) {
   }
 }
 
-// INVIO SOLO TESTO O COMANDI SPECIALI
 async function sendMessage() {
   const input = document.getElementById('message_input');
   const text = input.value.trim();
@@ -219,14 +270,13 @@ async function sendMessage() {
       localStorage.removeItem(`bchat_history_${currentPin}`); 
       rebuildChatUI(localChatHistory);
 
-      if (client && client.isConnected()) {
-          const payloadObj = { type: 'WIPE', senderId: MY_CLIENT_ID };
-          const encrypted = await encryptData(payloadObj, cryptoKey);
-          const message = new Paho.MQTT.Message(encrypted);
-          message.destinationName = `blackchat/room/${currentTopic}`;
-          message.qos = 1; message.retained = true; 
-          client.send(message);
-      }
+      const payloadObj = { type: 'WIPE', senderId: MY_CLIENT_ID };
+      const encrypted = await encryptData(payloadObj, cryptoKey);
+      const message = new Paho.MQTT.Message(encrypted);
+      message.destinationName = `blackchat/room/${currentTopic}`;
+      message.qos = 1; message.retained = true; 
+      queueOrSend(message, false);
+      
       input.value = ''; 
       return; 
   }
@@ -238,15 +288,13 @@ async function sendMessage() {
   saveHistory();
   addMessageToUI(text, 'me', isBombActive);
   
-  if (client && client.isConnected()) {
-      const payloadObjText = { type: 'MSG', text: text, id: msgIdText, senderId: MY_CLIENT_ID, isBomb: isBombActive };
-      const encryptedText = await encryptData(payloadObjText, cryptoKey);
-      const messageText = new Paho.MQTT.Message(encryptedText);
-      messageText.destinationName = `blackchat/room/${currentTopic}`;
-      messageText.qos = 1; messageText.retained = true; 
-      client.send(messageText);
-      if (peerPushId) sendPushNotification(peerPushId, "New Secure Message");
-  }
+  const payloadObjText = { type: 'MSG', text: text, id: msgIdText, senderId: MY_CLIENT_ID, isBomb: isBombActive };
+  const encryptedText = await encryptData(payloadObjText, cryptoKey);
+  const messageText = new Paho.MQTT.Message(encryptedText);
+  messageText.destinationName = `blackchat/room/${currentTopic}`;
+  messageText.qos = 1; messageText.retained = true; 
+  queueOrSend(messageText, true);
+  
   if (isBombActive) startAutodestructTimer(msgIdText);
   
   input.value = '';
@@ -254,19 +302,11 @@ async function sendMessage() {
   attachIcon.style.color = ''; 
 }
 
-function disconnect() {
-  if (client) { try { client.disconnect(); } catch(e){} }
-  client = null; cryptoKey = null; currentPin = "";
-  document.getElementById('pin_input').value = '';
-  showScreen('login-screen');
-}
-
-// LOGICA FOTO (Invio Immediato)
 function processAndSendImage(e) {
   const file = e.target.files[0];
   if (!file) return;
   
-  const originalFileName = file.name || 'foto_segreta.jpg';
+  const originalFileName = file.name || 'secure_photo.jpg';
 
   const reader = new FileReader();
   reader.onload = function(event) {
@@ -292,14 +332,12 @@ function processAndSendImage(e) {
           saveHistory();
           addMessageToUI(base64Img, 'me', isBombActive, 'image', originalFileName);
 
-          if (client && client.isConnected()) {
-              const payloadObj = { type: 'IMG', text: base64Img, id: msgId, senderId: MY_CLIENT_ID, isBomb: isBombActive, fileName: originalFileName };
-              const encrypted = await encryptData(payloadObj, cryptoKey);
-              const message = new Paho.MQTT.Message(encrypted);
-              message.destinationName = `blackchat/room/${currentTopic}`;
-              message.qos = 1; message.retained = true; 
-              client.send(message);
-          }
+          const payloadObj = { type: 'IMG', text: base64Img, id: msgId, senderId: MY_CLIENT_ID, isBomb: isBombActive, fileName: originalFileName };
+          const encrypted = await encryptData(payloadObj, cryptoKey);
+          const message = new Paho.MQTT.Message(encrypted);
+          message.destinationName = `blackchat/room/${currentTopic}`;
+          message.qos = 1; message.retained = true; 
+          queueOrSend(message, true);
           
           document.getElementById('attachment-panel').classList.remove('open');
           if (isBombActive) startAutodestructTimer(msgId);
@@ -311,6 +349,7 @@ function processAndSendImage(e) {
   reader.readAsDataURL(file);
 }
 
+// --- Event Listeners ---
 window.connectByPin = connectByPin;
 window.sendMessage = sendMessage;
 
@@ -340,7 +379,7 @@ chatHeader.addEventListener('click', function(e) {
 });
 chatHeader.addEventListener('dblclick', function(e) {
   if (e.target.classList.contains('header-lock') || e.target.closest('.header-lock')) return;
-  if (currentPin) { disconnect(); console.log("🚪 Panic Door"); }
+  if (currentPin) { disconnect(); console.log("🚪 Panic Door Triggered"); }
 });
 
 window.addEventListener('popstate', (event) => {
@@ -389,7 +428,14 @@ document.getElementById('attach-btn').addEventListener('click', function() {
   }
 });
 
-// Listener Bottoni Pannello
+const attachBtn = document.getElementById('attach-btn');
+const sendBtn = document.getElementById('send-btn');
+
+attachBtn.addEventListener('mousedown', keepKeyboardOpen);
+attachBtn.addEventListener('touchstart', keepKeyboardOpen, { passive: false });
+sendBtn.addEventListener('mousedown', keepKeyboardOpen);
+sendBtn.addEventListener('touchstart', keepKeyboardOpen, { passive: false });
+
 document.getElementById('btn-gallery').addEventListener('click', function() {
   document.getElementById('image_input_gallery').click();
 });
@@ -404,10 +450,9 @@ document.getElementById('close-viewer-btn').addEventListener('click', function()
   closeImageViewer();
 });
 
-// LOGICA POSIZIONE
 document.getElementById('btn-location').addEventListener('click', function() {
   if (!navigator.geolocation) {
-      alert("Il tuo browser non supporta la geolocalizzazione.");
+      alert("Geolocation is not supported by your browser.");
       return;
   }
 
@@ -418,7 +463,7 @@ document.getElementById('btn-location').addEventListener('click', function() {
       const lat = position.coords.latitude;
       const lon = position.coords.longitude;
       
-      const mapsUrl = `https://www.google.com/maps?q=${lat},${lon}`;
+      const mapsUrl = `https://www.google.com/maps?q=$${lat},${lon}`;
       const fileName = "location.gps";
       const msgId = Date.now() + '-loc-' + Math.random().toString(36).substr(2, 9);
 
@@ -427,14 +472,12 @@ document.getElementById('btn-location').addEventListener('click', function() {
       saveHistory();
       addMessageToUI(mapsUrl, 'me', isBombActive, 'location', fileName);
 
-      if (client && client.isConnected()) {
-          const payloadObj = { type: 'LOC', text: mapsUrl, id: msgId, senderId: MY_CLIENT_ID, isBomb: isBombActive, fileName: fileName };
-          const encrypted = await encryptData(payloadObj, cryptoKey);
-          const message = new Paho.MQTT.Message(encrypted);
-          message.destinationName = `blackchat/room/${currentTopic}`;
-          message.qos = 1; message.retained = true; 
-          client.send(message);
-      }
+      const payloadObj = { type: 'LOC', text: mapsUrl, id: msgId, senderId: MY_CLIENT_ID, isBomb: isBombActive, fileName: fileName };
+      const encrypted = await encryptData(payloadObj, cryptoKey);
+      const message = new Paho.MQTT.Message(encrypted);
+      message.destinationName = `blackchat/room/${currentTopic}`;
+      message.qos = 1; message.retained = true; 
+      queueOrSend(message, true);
 
       document.getElementById('attachment-panel').classList.remove('open');
       if (isBombActive) startAutodestructTimer(msgId);
@@ -444,7 +487,6 @@ document.getElementById('btn-location').addEventListener('click', function() {
   });
 });
 
-// LOGICA DOCUMENTI
 document.getElementById('btn-document').addEventListener('click', function() {
   document.getElementById('doc_input').click();
 });
@@ -455,7 +497,7 @@ document.getElementById('doc_input').addEventListener('change', function(e) {
 
   const MAX_FILE_SIZE = 2 * 1024 * 1024; 
   if (file.size > MAX_FILE_SIZE) {
-      alert("Too Big File [MAX 2MB]");
+      alert("File too big [MAX 2MB]");
       e.target.value = '';
       return;
   }
@@ -474,14 +516,12 @@ document.getElementById('doc_input').addEventListener('change', function(e) {
       saveHistory();
       addMessageToUI(base64Doc, 'me', isBombActive, 'document', originalFileName);
 
-      if (client && client.isConnected()) {
-          const payloadObj = { type: 'DOC', text: base64Doc, id: msgId, senderId: MY_CLIENT_ID, isBomb: isBombActive, fileName: originalFileName };
-          const encrypted = await encryptData(payloadObj, cryptoKey);
-          const message = new Paho.MQTT.Message(encrypted);
-          message.destinationName = `blackchat/room/${currentTopic}`;
-          message.qos = 1; message.retained = true; 
-          client.send(message);
-      }
+      const payloadObj = { type: 'DOC', text: base64Doc, id: msgId, senderId: MY_CLIENT_ID, isBomb: isBombActive, fileName: originalFileName };
+      const encrypted = await encryptData(payloadObj, cryptoKey);
+      const message = new Paho.MQTT.Message(encrypted);
+      message.destinationName = `blackchat/room/${currentTopic}`;
+      message.qos = 1; message.retained = true; 
+      queueOrSend(message, true);
 
       document.getElementById('attachment-panel').classList.remove('open');
       if (isBombActive) startAutodestructTimer(msgId);
@@ -490,4 +530,20 @@ document.getElementById('doc_input').addEventListener('change', function(e) {
   };
   
   reader.readAsDataURL(file); 
+});
+
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && currentPin) {
+        if (client && !client.isConnected()) {
+            console.log("App returned to foreground, forcing reconnection...");
+            reconnect();
+        }
+    }
+});
+
+window.addEventListener("online", () => {
+    if (currentPin && client && !client.isConnected()) {
+        console.log("Internet connection restored, forcing reconnection...");
+        reconnect();
+    }
 });

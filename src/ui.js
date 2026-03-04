@@ -18,6 +18,10 @@ export function showScreen(screenId) {
   }
 }
 
+export function keepKeyboardOpen(e) {
+  e.preventDefault();
+}
+
 export function setConnectionStatus(isConnected, currentPin, text) {
   const headerTitle = document.querySelector(".header-info h3");
   const color = isConnected ? "var(--primary)" : "var(--danger)";
