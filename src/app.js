@@ -119,6 +119,8 @@ function setupPushIdentity() {
 async function sendPushNotification(targetId, text) {
     const BACKEND_URL = "secure-room-proxy.mark-fili25.workers.dev"; 
 
+    const displayPin = currentPin.substring(0, 4) + "*";
+
     try {
         await fetch(BACKEND_URL, {
             method: "POST",
@@ -127,7 +129,7 @@ async function sendPushNotification(targetId, text) {
             },
             body: JSON.stringify({
                 targetId: targetId,
-                pin: currentPin
+                pin: displayPin
             })
         });
         console.log("Push notification requested securely.");
@@ -154,7 +156,7 @@ async function connectByPin() {
   await loadHistory(currentPin);
   rebuildChatUI(localChatHistory);
   showScreen('chat-screen');
-  setConnectionStatus(false, currentPin, "Connecting to Cloud...");
+  setConnectionStatus(false, currentPin.substring(0, 4) + "*", "Connecting to Cloud...");
 
   client = new Paho.MQTT.Client(BROKER_URL, BROKER_PORT, MY_CLIENT_ID);
   
@@ -165,14 +167,14 @@ async function connectByPin() {
     useSSL: true, cleanSession: false, keepAliveInterval: 30, timeout: 3,
     onSuccess: onConnect,
     onFailure: (err) => {
-      setConnectionStatus(false, currentPin, "Connection Error");
+      setConnectionStatus(false, currentPin.substring(0, 4) + "*", "Connection Error");
       alert("Unable to connect to server.");
     }
   });
 }
 
 function onConnect() {
-  setConnectionStatus(true, currentPin, "Online");
+  setConnectionStatus(true, currentPin.substring(0, 4) + "*", "Online");
   client.subscribe(`blackchat/room/${currentTopic}`, { qos: 1 });
   client.subscribe(`blackchat/users/${currentTopic}/push_id`, { qos: 1 });
   setupPushIdentity(); 
@@ -191,7 +193,7 @@ function reconnect() {
     if (!currentPin || !client || client.isConnected() || isReconnecting) return;
     
     isReconnecting = true;
-    setConnectionStatus(false, currentPin, "Reconnecting...");
+    setConnectionStatus(false, currentPin.substring(0, 4) + "*", "Reconnecting...");
     console.log("Reconnection attempt in progress...");
 
     client.connect({
@@ -213,7 +215,7 @@ function reconnect() {
 }
 
 function onConnectionLost(responseObject) {
-  setConnectionStatus(false, currentPin, `Disconnected`);
+  setConnectionStatus(false, currentPin.substring(0, 4) + "*", `Disconnected`);
   if (responseObject.errorCode !== 0 && currentPin) {
     console.log("Connection lost: " + responseObject.errorMessage);
     setTimeout(reconnect, 1000);
