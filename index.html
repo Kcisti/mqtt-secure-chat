@@ -84,18 +84,24 @@
       </div>
 
       <div id="room-options-overlay" class="new-room-overlay">
-        <div class="new-room-modal" style="padding-bottom: 20px;">
-          <h3 id="options-room-title" style="color: var(--text-main); margin-bottom: 20px; text-align: center; font-weight: 500;">Room Options</h3>
+        <div class="action-menu">
 
-          <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 20px;">
-            <button id="btn-custom-name" class="option-btn">Set Custom Name</button>
-            <button id="btn-remove-room" class="option-btn" style="background-color: var(--danger);">Remove Room</button>
-            <button id="btn-close-options" class="option-btn" style="background-color: var(--bubble-peer);">Cancel</button>
+          <div class="action-menu-header">
+            <span id="options-room-title">Room Options</span>
           </div>
+
+          <button id="btn-custom-name" class="action-item">Custom Name</button>
+
+          <button id="btn-remove-room" class="action-item danger">Remove Room</button>
+
+          <div class="action-menu-divider"></div>
+
         </div>
       </div>
 
-    </div>
+      </div>
+
+  
 
     <div id="chat-screen" class="screen">
       <div class="chat-header">

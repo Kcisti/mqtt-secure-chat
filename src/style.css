@@ -237,7 +237,7 @@ button {
   justify-content: center;
   align-items: center;
   font-size: 1.8rem;
-  color: var(--primary);
+  color: var(--text-muted);
   margin-right: 15px;
 }
 
@@ -264,22 +264,75 @@ button {
   max-width: 200px;
 }
 
-
-.option-btn {
-  width: 100%;
-  height: 50px;
+.action-menu {
+  background-color:  var(--bubble-peer);  
   border-radius: var(--bord-rads);
-  border: none;
-  color: var(--text-main);
-  font-size: 1.2rem;
-  font-weight: 500;
-  cursor: pointer;
-  background-color: var(--primary);
-  transition: transform 0.5s ease, background-color 0.5s ease;
+  width: 45%; 
+  overflow: hidden;
+  box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+  transform: translateY(20px) scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.option-btn:active {
-  transform: scale(0.95);
+
+#room-options-overlay {
+  display: block; 
+}
+
+
+#room-options-overlay .action-menu {
+  position: absolute; 
+  width: 220px; 
+  transform-origin: top right; 
+  transform: scale(0.9);
+  opacity: 0;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s;
+}
+
+#room-options-overlay.active .action-menu {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.action-menu-header {
+  padding: 0.7rem 1rem;
+  font-size: 1rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid #3a3a42;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.action-item {
+  background: transparent;
+  border: none;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  text-align: left;
+  font-size: 1rem;
+  border-radius: 0;
+  color: var(--text-main);
+  height: 40px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-weight: 400;
+  border-bottom: 1px solid #3a3a42;
+}
+
+.action-item:active {
+  background-color: #3a3a42;
+}
+
+.action-item.danger {
+  color: var(--danger);
+  border: 0;
+}
+
+.action-item.cancel {
+  margin: 0;
+  color: var(--text-muted);
 }
 
 /* ========================================= */

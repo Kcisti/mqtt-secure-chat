@@ -177,19 +177,31 @@ async function sendPushNotification(targetId, text) {
 // --- Connection Handlers ---
 const roomOptionsOverlay = document.getElementById('room-options-overlay');
 
-function showRoomOptions(pin) {
-    if (navigator.vibrate) navigator.vibrate(50); 
+function showRoomOptions(pin, roomElement) {
+    if (navigator.vibrate) navigator.vibrate(50);
     selectedPinForOptions = pin;
     const displayPin = pin.substring(0, 4) + '*';
     const currentName = roomNames[pin];
     
     document.getElementById('options-room-title').innerText = currentName ? currentName : `Room ${displayPin}`;
+    
+    const rect = roomElement.getBoundingClientRect();
+    const actionMenu = document.querySelector('#room-options-overlay .action-menu');
+    
+    actionMenu.style.top = (rect.bottom + 8) + 'px';
+    
+    actionMenu.style.right = (window.innerWidth - rect.right) + 'px';
+    
     roomOptionsOverlay.classList.add('active');
 }
 
-document.getElementById('btn-close-options')?.addEventListener('click', () => {
-    roomOptionsOverlay.classList.remove('active');
-});
+if (roomOptionsOverlay) {
+    roomOptionsOverlay.addEventListener('click', (e) => {
+        if (e.target === roomOptionsOverlay) {
+            roomOptionsOverlay.classList.remove('active');
+        }
+    });
+}
 
 document.getElementById('btn-remove-room')?.addEventListener('click', () => {
     savedRooms = savedRooms.filter(p => p !== selectedPinForOptions);
@@ -250,8 +262,8 @@ function renderRoomList() {
             isLongPress = false;
             pressTimer = setTimeout(() => {
                 isLongPress = true;
-                showRoomOptions(pin);
-            }, 600);
+                showRoomOptions(pin, roomDiv); 
+            }, 500);
         };
 
         const cancelPress = () => {
