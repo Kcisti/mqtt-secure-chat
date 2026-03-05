@@ -1,6 +1,5 @@
 import { hashPinForTopic, deriveKey, encryptData, decryptData } from './crypto.js';
-import { scrollToBottom, showScreen, setConnectionStatus, addMessageToUI,
-rebuildChatUI, playNotificationSound, applyPrivacyMode, closeImageViewer } from './ui.js';
+import { scrollToBottom, showScreen, setConnectionStatus, addMessageToUI, rebuildChatUI, playNotificationSound, applyPrivacyMode, closeImageViewer } from './ui.js';
 
 // --- Global State ---
 let client = null;
@@ -12,6 +11,7 @@ let peerPushId = null;
 let offlineQueue = [];
 let isReconnecting = false;
 let isPrivacyMode = false;
+let savedRooms = JSON.parse(localStorage.getItem('bchat_rooms')) || [];
 
 // --- Initialization ---
 let storedClientId = localStorage.getItem("mqtt_client_id");
@@ -20,7 +20,6 @@ if (!storedClientId) {
   localStorage.setItem("mqtt_client_id", storedClientId);
 }
 const MY_CLIENT_ID = storedClientId;
-
 const BROKER_URL = "broker.emqx.io"; 
 const BROKER_PORT = 8084; 
 
@@ -141,57 +140,115 @@ async function sendPushNotification(targetId, text) {
 }
 
 // --- Connection Handlers ---
-async function connectByPin() {
-  const pin = document.getElementById('pin_input').value.trim();
-  if (!pin) return;
+function renderRoomList() {
+    const container = document.getElementById('room-list-container');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    savedRooms.forEach(pin => {
+        const displayPin = pin.substring(0, 4) + '***'; 
+        const roomDiv = document.createElement('div');
+        roomDiv.className = 'room-item';
+        roomDiv.innerHTML = `
+          <div class="room-avatar"><ion-icon name="lock-closed"></ion-icon></div>
+          <div class="room-details">
+            <div class="room-name">Room ${displayPin}</div>
+            <div class="room-last-msg">Tap To Connect..</div>
+          </div>
+          <div class="room-action"><ion-icon name="chevron-forward-outline"></ion-icon></div>
+        `;
+        roomDiv.onclick = () => enterRoom(pin);
+        container.appendChild(roomDiv);
+    });
+}
 
-  if (pin.length < 8) {
-      const connectBtn = document.getElementById('connect-btn');
-      const loginStatus = document.getElementById('status-text');
+async function enterRoom(pin) {
+    if (!pin) return;
 
-      if (loginStatus) {
-          loginStatus.innerText = "SECURITY ALERT: Passphrase must be at least 8 characters long.";
-      }
+    if (pin.length < 8) {
+        const roomListScreen = document.getElementById('room-list-screen');
+        const isRoomListVisible = roomListScreen && roomListScreen.offsetWidth > 0;
 
-      if (connectBtn) {
-          connectBtn.classList.remove('shake-error'); 
-          void connectBtn.offsetWidth; 
-          connectBtn.classList.add('shake-error');
-          
-          setTimeout(() => {
-              connectBtn.classList.remove('shake-error');
-          }, 400);
-      }
-      return;
-  }
+        if (isRoomListVisible) {
+            const addBtn = document.getElementById('add-room-btn');
+            const statusList = document.getElementById('status-list');
 
-  currentPin = pin;
-  currentTopic = await hashPinForTopic(pin);
-  cryptoKey = await deriveKey(pin);
+            if (statusList) {
+                statusList.innerText = "SECURITY ALERT: Min 8 characters.";
+                setTimeout(() => { statusList.innerText = ""; }, 5000);
+            }
 
-  await loadHistory(currentPin);
-  rebuildChatUI(localChatHistory);
+            if (addBtn) {
+                addBtn.classList.remove('shake-error-vertical');
+                void addBtn.offsetWidth; 
+                addBtn.classList.add('shake-error-vertical');
+                setTimeout(() => addBtn.classList.remove('shake-error-vertical'), 400);
+            }
+        } else {
+            const connectBtn = document.getElementById('connect-btn');
+            const loginStatus = document.getElementById('status-text');
 
-  const chatScreen = document.getElementById('chat-screen');
-  chatScreen.classList.remove('chat-focus-in'); // Pulisce memorie di vecchie animazioni
-  void chatScreen.offsetWidth; // Trucco JS per riavviare l'animazione da zero
-  chatScreen.classList.add('chat-focus-in');
+            if (loginStatus) {
+                loginStatus.innerText = "SECURITY ALERT: Passphrase must be at least 8 characters long.";
+            }
 
-  showScreen('chat-screen');
-  setConnectionStatus(false, currentPin.substring(0, 4) + "***", "Connecting to Cloud...");
-
-  client = new Paho.MQTT.Client(BROKER_URL, BROKER_PORT, MY_CLIENT_ID);
-  client.onConnectionLost = onConnectionLost;
-  client.onMessageArrived = onMessageArrived;
-
-  client.connect({
-    useSSL: true, cleanSession: false, keepAliveInterval: 30, timeout: 3,
-    onSuccess: onConnect,
-    onFailure: (err) => {
-      setConnectionStatus(false, currentPin.substring(0, 4) + "***", "Connection Error");
-      alert("Unable to connect to server.");
+            if (connectBtn) {
+                connectBtn.classList.remove('shake-error'); 
+                void connectBtn.offsetWidth; 
+                connectBtn.classList.add('shake-error');
+                setTimeout(() => { connectBtn.classList.remove('shake-error'); }, 400);
+            }
+        }
+        return; 
     }
-  });
+
+    if (!savedRooms.includes(pin)) {
+        savedRooms.push(pin);
+        localStorage.setItem('bchat_rooms', JSON.stringify(savedRooms));
+        renderRoomList();
+    }
+
+    currentPin = pin;
+    currentTopic = await hashPinForTopic(pin);
+    cryptoKey = await deriveKey(pin);
+
+    await loadHistory(currentPin);
+    rebuildChatUI(localChatHistory);
+    
+    isPrivacyMode = false;
+    localStorage.setItem('secure_room_privacy', 'false');
+    applyPrivacyMode(false);
+
+    showScreen('chat-screen');
+    setConnectionStatus(false, currentPin.substring(0, 4) + "***", "Connecting to Cloud...");
+
+    client = new Paho.MQTT.Client(BROKER_URL, BROKER_PORT, MY_CLIENT_ID);
+    client.onConnectionLost = onConnectionLost;
+    client.onMessageArrived = onMessageArrived;
+
+    client.connect({
+      useSSL: true, cleanSession: false, keepAliveInterval: 30, timeout: 3,
+      onSuccess: onConnect,
+      onFailure: (err) => {
+        setConnectionStatus(false, currentPin.substring(0, 4) + "***", "Connection Error");
+        alert("Unable to connect to server.");
+      }
+    });
+}
+
+function backToRoomList() {
+    if (client) { try { client.disconnect(); } catch(e){} }
+    client = null; 
+    
+    currentPin = "";
+    cryptoKey = null;
+    currentTopic = "";
+    localChatHistory = [];
+    
+    document.getElementById('chat-messages').innerHTML = '';
+    
+    renderRoomList();
+    showScreen('room-list-screen');
 }
 
 function onConnect() {
@@ -244,7 +301,8 @@ function disconnect() {
   if (client) { try { client.disconnect(); } catch(e){} }
   client = null; cryptoKey = null; currentPin = "";
   
-  document.getElementById('pin_input').value = '';
+  const pinInput = document.getElementById('pin_input');
+  if (pinInput) pinInput.value = '';
   resetInputState();
 
   setTimeout(() => { document.getElementById('status-text').innerHTML = "Disconnected."; }, 500);
@@ -261,7 +319,8 @@ function disconnect() {
   setTimeout(() => { document.getElementById('status-text').innerHTML = ""; }, 3400);
 
   showScreen('login-screen');
-  document.getElementById('chat-screen').classList.remove('chat-focus-in');
+  const chatScreen = document.getElementById('chat-screen');
+  if (chatScreen) chatScreen.classList.remove('chat-focus-in');
 }
 
 // --- Message Handlers ---
@@ -524,65 +583,159 @@ function handleLocation(e) {
   });
 }
 
-window.connectByPin = connectByPin;
 window.sendMessage = sendMessage;
+window.enterRoom = enterRoom;
+window.backToRoomList = backToRoomList;
 
-document.getElementById('message_input').addEventListener('click',scrollToBottom);
-document.getElementById('message_input').addEventListener('focus',scrollToBottom);
+const msgInput = document.getElementById('message_input');
+if (msgInput) {
+    msgInput.addEventListener('click', scrollToBottom);
+    msgInput.addEventListener('focus', scrollToBottom);
+    msgInput.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') sendMessage();
+    });
+    msgInput.addEventListener('input', function() {
+      closeAttachmentPanel(); 
+      const attachIcon = document.querySelector('#attach-btn ion-icon');
+      const panelIcon = document.querySelector('#panel-bomb-icon');
+      const isBomb = panelIcon ? panelIcon.getAttribute('name') === 'radio-button-on' : false;
+      
+      if (this.value.trim().length > 0) {
+        if (attachIcon.getAttribute('name') === 'add') {
+          attachIcon.setAttribute('name', isBomb ? 'radio-button-on' : 'radio-button-off');
+          attachIcon.style.color = isBomb ? 'var(--danger)' : '';
+        }
+      } else {
+        attachIcon.setAttribute('name', 'add'); 
+        attachIcon.style.color = ''; 
+      }
+    });
+}
 
-document.getElementById('connect-btn').addEventListener('click', connectByPin);
-document.getElementById('pin_input').addEventListener('keydown', function(event) {
-  if (event.key==='Enter') connectByPin();
+const pinInput = document.getElementById('pin_input');
+if (pinInput) {
+    pinInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') enterRoom(this.value.trim());
+    });
+    pinInput.addEventListener('input', function() {
+        const loginStatus = document.getElementById('status-text');
+        if (loginStatus) loginStatus.innerText = "";
+    });
+}
+
+const connectBtn = document.getElementById('connect-btn');
+if (connectBtn) {
+    connectBtn.addEventListener('click', () => {
+        if (pinInput) enterRoom(pinInput.value.trim());
+    });
+}
+
+// --- GESTIONE OVERLAY NUOVA STANZA ---
+const addRoomBtn = document.getElementById('add-room-btn');
+const newRoomOverlay = document.getElementById('new-room-overlay');
+const overlayConnectBtn = document.getElementById('overlay-connect-btn');
+const overlayPinInput = document.getElementById('overlay_room_pin');
+
+if (addRoomBtn && newRoomOverlay) {
+    // 1. Apri l'overlay cliccando sul +
+    addRoomBtn.addEventListener('click', () => {
+        newRoomOverlay.classList.add('active');
+        if (overlayPinInput) overlayPinInput.focus();
+    });
+
+    // 2. Chiudi l'overlay se clicchi nello sfondo sfocato
+    newRoomOverlay.addEventListener('click', (e) => {
+        if (e.target === newRoomOverlay) {
+            newRoomOverlay.classList.remove('active');
+            if (overlayPinInput) overlayPinInput.value = '';
+        }
+    });
+}
+
+function handleOverlayConnect() {
+    if (!overlayPinInput) return;
+    const pin = overlayPinInput.value.trim();
+    
+    // Gestione Errore: Shake sul bottone "attachment" dell'overlay
+    if (pin.length < 8) {
+        const statusOverlay = document.getElementById('overlay-status');
+        if (statusOverlay) {
+            statusOverlay.innerText = "SECURITY ALERT: Min 8 characters.";
+            setTimeout(() => { statusOverlay.innerText = ""; }, 3000);
+        }
+        if (overlayConnectBtn) {
+            overlayConnectBtn.classList.remove('shake-error');
+            void overlayConnectBtn.offsetWidth;
+            overlayConnectBtn.classList.add('shake-error');
+            setTimeout(() => overlayConnectBtn.classList.remove('shake-error'), 400);
+        }
+        return;
+    }
+    
+    // Se il PIN è ok, chiudi l'overlay e connettiti
+    newRoomOverlay.classList.remove('active');
+    overlayPinInput.value = '';
+    enterRoom(pin);
+}
+
+// Assegna il click al bottone "attachment" dell'overlay
+if (overlayConnectBtn) {
+    overlayConnectBtn.addEventListener('click', handleOverlayConnect);
+}
+
+// Assegna l'invio e la pulizia errori all'input dell'overlay
+if (overlayPinInput) {
+    overlayPinInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleOverlayConnect();
+    });
+    overlayPinInput.addEventListener('input', () => {
+        const statusOverlay = document.getElementById('overlay-status');
+        if (statusOverlay) statusOverlay.innerText = "";
+    });
+}
+
+window.addEventListener('load', () => {
+    const overlay = document.getElementById('transition-overlay');
+    if (overlay) {
+        setTimeout(() => { overlay.classList.remove('active'); }, 1500);
+    }
+    
+    if (savedRooms.length > 0) {
+        renderRoomList();
+        showScreen('room-list-screen');
+    } else {
+        showScreen('login-screen');
+    }
 });
-
-document.getElementById('message_input').addEventListener('keydown', function(event) {
-  if (event.key==='Enter') sendMessage();
-});
-
 
 applyPrivacyMode(isPrivacyMode);
 
 const chatHeader = document.querySelector('.chat-header');
 let lastTapTime = 0;
 
-chatHeader.addEventListener('click', function(e) {
-  if (e.target.classList.contains('header-lock') || e.target.closest('.header-lock')) {
-    isPrivacyMode = !isPrivacyMode; 
-    localStorage.setItem('secure_room_privacy', isPrivacyMode); 
-    applyPrivacyMode(isPrivacyMode); 
-    return;
-  }
+if (chatHeader) {
+    chatHeader.addEventListener('click', function(e) {
+      if (e.target.classList.contains('header-lock') || e.target.closest('.header-lock')) {
+        isPrivacyMode = !isPrivacyMode; 
+        localStorage.setItem('secure_room_privacy', isPrivacyMode); 
+        applyPrivacyMode(isPrivacyMode); 
+        return;
+      }
 
-  const currentTime = new Date().getTime();
-  const tapLength = currentTime - lastTapTime;
-  
-  if (tapLength < 500 && tapLength > 0) {
-    if (currentPin) { disconnect(); }
-  }
-  lastTapTime = currentTime;
-});
+      const currentTime = new Date().getTime();
+      const tapLength = currentTime - lastTapTime;
+      
+      if (tapLength < 500 && tapLength > 0) {
+        if (currentPin) { disconnect(); }
+      }
+      lastTapTime = currentTime;
+    });
+}
 
 window.addEventListener('popstate', (event) => {
-  if (document.getElementById('chat-screen').classList.contains('active')) {
+  const chatScreen = document.getElementById('chat-screen');
+  if (chatScreen && chatScreen.classList.contains('active')) {
     event.preventDefault(); disconnect(); 
-  }
-});
-
-document.getElementById('message_input').addEventListener('input', function() {
-  closeAttachmentPanel(); 
-  
-  const attachIcon = document.querySelector('#attach-btn ion-icon');
-  const panelIcon = document.querySelector('#panel-bomb-icon');
-  const isBomb = panelIcon ? panelIcon.getAttribute('name') === 'radio-button-on' : false;
-  
-  if (this.value.trim().length > 0) {
-    if (attachIcon.getAttribute('name') === 'add') {
-      attachIcon.setAttribute('name', isBomb ? 'radio-button-on' : 'radio-button-off');
-      attachIcon.style.color = isBomb ? 'var(--danger)' : '';
-    }
-  } else {
-    attachIcon.setAttribute('name', 'add'); 
-    attachIcon.style.color = ''; 
   }
 });
 
@@ -590,7 +743,7 @@ document.addEventListener('click', function(event) {
   const panel = document.getElementById('attachment-panel');
   const attachBtn = document.getElementById('attach-btn');
   if (panel && panel.classList.contains('open')) {
-    if (!panel.contains(event.target) && !attachBtn.contains(event.target)) {
+    if (!panel.contains(event.target) && (!attachBtn || !attachBtn.contains(event.target))) {
       closeAttachmentPanel();
     }
   }
@@ -604,77 +757,93 @@ const btnCamera = document.getElementById('btn-camera');
 const btnLocation = document.getElementById('btn-location');
 const btnDocument = document.getElementById('btn-document');
 
-sendBtn.addEventListener('mousedown', handleSend);
-sendBtn.addEventListener('touchstart', handleSend, { passive: false });
+if (sendBtn) {
+    sendBtn.addEventListener('mousedown', handleSend);
+    sendBtn.addEventListener('touchstart', handleSend, { passive: false });
+}
 
-attachBtn.addEventListener('mousedown', handleAttach);
-attachBtn.addEventListener('touchstart', handleAttach, { passive: false });
+if (attachBtn) {
+    attachBtn.addEventListener('mousedown', handleAttach);
+    attachBtn.addEventListener('touchstart', handleAttach, { passive: false });
+}
 
 if (btnPanelBomb) {
     btnPanelBomb.addEventListener('mousedown', handlePanelBomb);
     btnPanelBomb.addEventListener('touchstart', handlePanelBomb, { passive: false });
 }
 
-btnGallery.addEventListener('mousedown', handleGallery);
-btnGallery.addEventListener('touchstart', handleGallery, { passive: false });
+if (btnGallery) {
+    btnGallery.addEventListener('mousedown', handleGallery);
+    btnGallery.addEventListener('touchstart', handleGallery, { passive: false });
+}
 
-btnCamera.addEventListener('mousedown', handleCamera);
-btnCamera.addEventListener('touchstart', handleCamera, { passive: false });
+if (btnCamera) {
+    btnCamera.addEventListener('mousedown', handleCamera);
+    btnCamera.addEventListener('touchstart', handleCamera, { passive: false });
+}
 
-btnLocation.addEventListener('mousedown', handleLocation);
-btnLocation.addEventListener('touchstart', handleLocation, { passive: false });
+if (btnLocation) {
+    btnLocation.addEventListener('mousedown', handleLocation);
+    btnLocation.addEventListener('touchstart', handleLocation, { passive: false });
+}
 
-btnDocument.addEventListener('mousedown', handleDocument);
-btnDocument.addEventListener('touchstart', handleDocument, { passive: false });
+if (btnDocument) {
+    btnDocument.addEventListener('mousedown', handleDocument);
+    btnDocument.addEventListener('touchstart', handleDocument, { passive: false });
+}
 
-document.getElementById('image_input_gallery').addEventListener('change', processAndSendImage);
-document.getElementById('image_input_camera').addEventListener('change', processAndSendImage);
+const imgGalleryInput = document.getElementById('image_input_gallery');
+const imgCameraInput = document.getElementById('image_input_camera');
+const closeViewerBtn = document.getElementById('close-viewer-btn');
+const docInput = document.getElementById('doc_input');
 
-document.getElementById('close-viewer-btn').addEventListener('click', function() {
-  closeImageViewer();
-});
+if (imgGalleryInput) imgGalleryInput.addEventListener('change', processAndSendImage);
+if (imgCameraInput) imgCameraInput.addEventListener('change', processAndSendImage);
+if (closeViewerBtn) closeViewerBtn.addEventListener('click', closeImageViewer);
 
-document.getElementById('doc_input').addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
+if (docInput) {
+    docInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
 
-  const MAX_FILE_SIZE = 2 * 1024 * 1024; 
-  if (file.size > MAX_FILE_SIZE) {
-      alert("File too big [MAX 2MB]");
-      e.target.value = '';
-      return;
-  }
+      const MAX_FILE_SIZE = 2 * 1024 * 1024; 
+      if (file.size > MAX_FILE_SIZE) {
+          alert("File too big [MAX 2MB]");
+          e.target.value = '';
+          return;
+      }
 
-  const originalFileName = file.name;
-  const attachIcon = document.querySelector('#attach-btn ion-icon');
-  const panelIcon = document.querySelector('#panel-bomb-icon');
-  const isBombActive = (attachIcon && attachIcon.getAttribute('name') === 'radio-button-on') || 
-                       (panelIcon && panelIcon.getAttribute('name') === 'radio-button-on');
+      const originalFileName = file.name;
+      const attachIcon = document.querySelector('#attach-btn ion-icon');
+      const panelIcon = document.querySelector('#panel-bomb-icon');
+      const isBombActive = (attachIcon && attachIcon.getAttribute('name') === 'radio-button-on') || 
+                           (panelIcon && panelIcon.getAttribute('name') === 'radio-button-on');
 
-  const reader = new FileReader();
-  reader.onload = async function(event) {
-      const base64Doc = event.target.result; 
-      const msgId = Date.now() + '-doc-' + Math.random().toString(36).substr(2, 9);
+      const reader = new FileReader();
+      reader.onload = async function(event) {
+          const base64Doc = event.target.result; 
+          const msgId = Date.now() + '-doc-' + Math.random().toString(36).substr(2, 9);
 
-      const msgObj = { id: msgId, sender: 'me', text: base64Doc, time: Date.now(), isBomb: isBombActive, msgType: 'document', fileName: originalFileName };
-      localChatHistory.push(msgObj);
-      saveHistory();
-      addMessageToUI(base64Doc, 'me', isBombActive, 'document', originalFileName);
+          const msgObj = { id: msgId, sender: 'me', text: base64Doc, time: Date.now(), isBomb: isBombActive, msgType: 'document', fileName: originalFileName };
+          localChatHistory.push(msgObj);
+          saveHistory();
+          addMessageToUI(base64Doc, 'me', isBombActive, 'document', originalFileName);
 
-      const payloadObj = { type: 'DOC', text: base64Doc, id: msgId, senderId: MY_CLIENT_ID, isBomb: isBombActive, fileName: originalFileName };
-      const encrypted = await encryptData(payloadObj, cryptoKey);
-      const message = new Paho.MQTT.Message(encrypted);
-      message.destinationName = `blackchat/room/${currentTopic}`;
-      message.qos = 1; message.retained = true; 
-      queueOrSend(message, true);
+          const payloadObj = { type: 'DOC', text: base64Doc, id: msgId, senderId: MY_CLIENT_ID, isBomb: isBombActive, fileName: originalFileName };
+          const encrypted = await encryptData(payloadObj, cryptoKey);
+          const message = new Paho.MQTT.Message(encrypted);
+          message.destinationName = `blackchat/room/${currentTopic}`;
+          message.qos = 1; message.retained = true; 
+          queueOrSend(message, true);
+          
+          if (isBombActive) startAutodestructTimer(msgId);
+          resetInputState();
+          e.target.value = ''; 
+      };
       
-      if (isBombActive) startAutodestructTimer(msgId);
-      resetInputState();
-      e.target.value = ''; 
-  };
-  
-  reader.readAsDataURL(file); 
-});
+      reader.readAsDataURL(file); 
+    });
+}
 
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
@@ -689,22 +858,8 @@ document.addEventListener("visibilitychange", () => {
     }
 });
 
-
-document.getElementById('pin_input').addEventListener('input', function() {
-    const loginStatus = document.getElementById('status-text');
-    if (loginStatus) loginStatus.innerText = "";
-});
-
 window.addEventListener("online", () => {
     if (currentPin && client && !client.isConnected()) {
         reconnect();
     }
-});
-
-window.addEventListener('load', () => {
-    const overlay = document.getElementById('transition-overlay');
-    setTimeout(() => {
-        overlay.classList.remove('active');
-    }, 1500);
-
 });

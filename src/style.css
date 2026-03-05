@@ -1,3 +1,6 @@
+/* ========================================= */
+/* 1. CSS VARIABLES & THEME                  */
+/* ========================================= */
 :root {
   --bg-body: #000000;
   --bg-app: #000000;
@@ -6,7 +9,7 @@
   --text-muted: #a8a8a8; 
 
   --primary: #301981;    
-  --primary-hover:#301981a3;
+  --primary-hover: #301981a3;
   
   --danger: #ed4956;  
   --success: #00c853;
@@ -16,9 +19,12 @@
 
   --border-color: #262626; 
 
-  --bord-rads:12px;
+  --bord-rads: 12px;
 }
 
+/* ========================================= */
+/* 2. BASE & RESET                           */
+/* ========================================= */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -26,12 +32,6 @@
   font-family: 'Inter', sans-serif;
   -webkit-tap-highlight-color: transparent; 
   outline: none;
-}
-
-html, body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
 }
 
 html, body {
@@ -74,16 +74,22 @@ body {
   }
 }
 
+/* ========================================= */
+/* 3. CORE LAYOUT & SCREENS                  */
+/* ========================================= */
 .screen {
   display: none;
   flex-direction: column;
   height: 100%;
 }
+
 .screen.active {
   display: flex;
 }
 
-
+/* ========================================= */
+/* 4. LOGIN SCREEN                           */
+/* ========================================= */
 #login-screen {
   justify-content: center;
   align-items: center;
@@ -142,17 +148,13 @@ button {
   background-color: var(--primary);
   color: white;
   border: none;
-  padding: 12px 20px 12px;
-  border-radius:  var(--bord-rads);
+  padding: 12px 20px;
+  border-radius: var(--bord-rads);
   font-size: 1.2rem;
   font-weight: 500;
   cursor: pointer;
   transition: 0.2s;
   height: 50px;
-}
-
-button:hover { 
-  background-color: var(--primary-hover);
 }
 
 #status-text {
@@ -161,20 +163,202 @@ button:hover {
   min-height: 20px;
 }
 
+/* ========================================= */
+/* 5. ROOM LIST SCREEN                       */
+/* ========================================= */
+.room-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 1.5rem;
+  background-color: var(--bg-app);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.room-list-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.icon-btn-add {
+  background-color: transparent;
+  flex: 0;
+  color: var(--text-main);
+  border: none;
+  font-size: 2.2rem;
+  cursor: pointer;
+  transition: transform 0.2s, color 0.2s;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0px;
+  padding: 0;
+}
+
+.icon-btn-add ion-icon:active {
+  transform: scale(0.8);
+}
+
+.room-list-body {
+  overflow-y: auto;
+  height: calc(100vh - 70px); 
+  padding: 10px;
+}
+
+.room-item {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  background-color: var(--bg-panel, #1e1e24);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.room-item:active {
+  transform: scale(0.98);
+  background-color: #2a2a32;
+}
+
+.room-avatar {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.3rem;
+  color: var(--text-muted, #aaa);
+  margin-right: 15px;
+}
+
+.room-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.room-name {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.room-last-msg {
+  font-size: 0.85rem;
+  color: var(--text-muted, #888);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.room-action {
+  color: var(--text-muted, #555);
+  font-size: 1.2rem;
+}
+
+/* ========================================= */
+/* 6. NEW ROOM OVERLAY (GLASSMORPHISM)       */
+/* ========================================= */
+.new-room-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-color: rgba(0, 0, 0, 0.6); 
+  backdrop-filter: blur(8px); 
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.new-room-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.new-room-modal {
+  width: 90%;
+  max-width: 400px;
+  transform: translateY(20px);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.new-room-overlay.active .new-room-modal {
+  transform: translateY(0); 
+}
+
+.overlay-attach-btn {
+  max-width: 50px;
+  width: 50px;
+  background-color: transparent;
+  color: var(--text-muted);
+  padding: 0;
+  margin-right: 0.5rem;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  border-radius: 0;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, color 0.2s;
+}
+
+.overlay-attach-btn:active {
+  transform: scale(0.9);
+}
+
+#overlay-status {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 10px;
+  min-height: 20px;
+}
+
+/* ========================================= */
+/* 7. CHAT SCREEN: HEADER & MESSAGES         */
+/* ========================================= */
 .chat-header {
   padding: 1.2rem 1.5rem;
-  background-color:var(--bg-app);
+  background-color: var(--bg-app);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
   user-select: none;
 }
+
 .chat-header h3 { 
   font-size: 1.4rem; 
   font-weight: 600; 
 }
 
+.header-lock {
+  transform: translateY(4px);
+  font-size: 1.6rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.header-lock:active {
+  transform: translateY(4px) scale(0.9); 
+}
 
 .privacy-mode .msg-bubble {
   filter: blur(6px);
@@ -189,17 +373,6 @@ button:hover {
   transition: filter 0.1s ease;
 }
 
-.header-lock:active {
-  transform: translateY(4px) scale(0.9); 
-}
-
-.header-lock{
-  transform: translateY(4px);
-  font-size: 1.6rem;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
 #chat-messages {
   flex: 1;
   padding: 1.5rem;
@@ -208,7 +381,6 @@ button:hover {
   flex-direction: column;
   gap: 12px;
 }
-
 
 #chat-messages::-webkit-scrollbar {
   width: 0px; 
@@ -219,20 +391,11 @@ button:hover {
   width: 100%;
   animation: slideInUp 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
-@keyframes slideInUp {
-  0% { 
-    opacity: 0; 
-    transform: translateY(10px); 
-  }
-  100% { 
-    opacity: 1; 
-    transform: translateY(0); 
-  }
-}
 
 .msg-wrapper.me { 
   justify-content: flex-end; 
 }
+
 .msg-wrapper.peer { 
   justify-content: flex-start; 
 }
@@ -251,21 +414,25 @@ button:hover {
   background-color: var(--bubble-me);
   border-bottom-right-radius: 2px;
 }
+
 .peer .msg-bubble { 
   background-color: var(--bubble-peer); 
   border-bottom-left-radius: 2px;
 }
 
+/* ========================================= */
+/* 8. CHAT SCREEN: INPUT AREA                */
+/* ========================================= */
 .chat-input-area {
   padding: 1rem 1.5rem;
   background-color: var(--bg-app);
   border-top: 1px solid var(--border-color);
   display: flex;
-  gap:10px;
+  gap: 10px;
   align-items: center; 
 }
 
-.input-container{
+.input-container {
   display: flex;
   flex-direction: row;
   border: 1px solid var(--border-color);
@@ -303,14 +470,13 @@ button:hover {
   transition: transform 0.2s ease;
 }
 
-
 #attach-btn ion-icon[name="radio-button-off"],
 #attach-btn ion-icon[name="radio-button-on"] {
   font-size: 1.6rem; 
 }
 
 #send-btn {
-  width:50px;
+  width: 50px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -341,13 +507,9 @@ button:hover {
   animation: tick-tock 2s infinite ease-in-out;
 }
 
-@keyframes tick-tock {
-  0% { opacity: 0.3; transform: scale(0.95); }
-  50% { opacity: 1; transform: scale(1.05); }
-  100% { opacity: 0.3; transform: scale(0.95); }
-}
-
-
+/* ========================================= */
+/* 9. ATTACHMENT PANEL & MEDIA VIEWER        */
+/* ========================================= */
 #attachment-panel {
   display: flex;
   flex-wrap: wrap; 
@@ -385,23 +547,6 @@ button:hover {
   cursor: pointer;
   width: 100%; 
 }
-
-#attachment-panel {
-  display: flex;
-  justify-content: space-between;
-  align-items: center; 
-  padding: 0 1.5rem;
-  margin: 0 1.5rem;
-  background-color: var(--bg-app);
-  border-radius: var(--bord-rads);
-  overflow: hidden;
-  max-height: 0; 
-  opacity: 0;
-  transform-origin: bottom right;
-  transform: scale(0.5) translate(20px, 20px);
-  transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.1); 
-}
-
 
 .panel-bomb-text {
   font-size: 1.1rem;
@@ -447,7 +592,7 @@ button:hover {
   transition: transform 0.2s, background-color 0.2s;
 }
 
-.attach-item:active{
+.attach-item:active {
   transform: scale(0.9); 
 }
 
@@ -498,7 +643,8 @@ button:hover {
   font-size: 1.8rem;
   color: white;
 }
-#close-viewer-btn:active{
+
+#close-viewer-btn:active {
   transform: scale(0.9);
   transform: translateX(0.2rem);
 }
@@ -519,6 +665,38 @@ button:hover {
   border-radius: 8px;
 }
 
+/* ========================================= */
+/* 10. ANIMATIONS & EFFECTS                  */
+/* ========================================= */
+@keyframes tick-tock {
+  0% { opacity: 0.3; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 0.3; transform: scale(0.95); }
+}
+
+@keyframes slideInUp {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shakeX {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.shake-error {
+  animation: shakeX 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes cameraFocus {
+  0% { filter: blur(15px); opacity: 0; }
+  100% { filter: blur(0px); opacity: 1; }
+}
+
+.chat-focus-in {
+  animation: cameraFocus 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
 
 .transition-overlay {
   position: fixed;
@@ -549,11 +727,9 @@ button:hover {
   transform: scale(0.5);
 }
 
-
 .transition-overlay.active .transition-padlock {
   animation: padlockGlow 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
-
 
 @keyframes padlockGlow {
   0% { 
@@ -571,30 +747,4 @@ button:hover {
     transform: scale(1); 
     filter: drop-shadow(0 0 8px rgba(168, 168, 168, 0.8));
   }
-}
-
-@keyframes shakeX {
-  0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-6px); }
-  40%, 80% { transform: translateX(6px); }
-}
-
-.shake-error {
-  animation: shakeX 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-}
-
-@keyframes cameraFocus {
-  0% {
-    filter: blur(15px);
-    opacity: 0;
-  }
-  100% {
-    filter: blur(0px);
-    opacity: 1;
-
-  }
-}
-
-.chat-focus-in {
-  animation: cameraFocus 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
 }
