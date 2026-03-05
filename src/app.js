@@ -128,7 +128,7 @@ function setupPushIdentity() {
 
 async function sendPushNotification(targetId, text) {
     const BACKEND_URL = "https://secure-room-proxy.mark-fili25.workers.dev"; 
-    const displayPin = currentPin.substring(0, 4) + "***";
+    const displayPin = currentPin.substring(0, 4) + "*";
 
     try {
         await fetch(BACKEND_URL, {
@@ -146,7 +146,7 @@ function renderRoomList() {
     container.innerHTML = '';
     
     savedRooms.forEach(pin => {
-        const displayPin = pin.substring(0, 4) + '***'; 
+        const displayPin = pin.substring(0, 4) + '*'; 
         const roomDiv = document.createElement('div');
         roomDiv.className = 'room-item';
         roomDiv.innerHTML = `
@@ -155,9 +155,9 @@ function renderRoomList() {
             <div class="room-name">Room ${displayPin}</div>
             <div class="room-last-msg">Tap To Connect..</div>
           </div>
-          <div class="room-action"><ion-icon name="chevron-forward-outline"></ion-icon></div>
         `;
-        roomDiv.onclick = () => enterRoom(pin);
+
+        roomDiv.onclick = (e) => enterRoomWithRipple(pin, e);
         container.appendChild(roomDiv);
     });
 }
@@ -220,7 +220,7 @@ async function enterRoom(pin) {
     applyPrivacyMode(false);
 
     showScreen('chat-screen');
-    setConnectionStatus(false, currentPin.substring(0, 4) + "***", "Connecting to Cloud...");
+    setConnectionStatus(false, currentPin.substring(0, 4) + "*", "Connecting to Cloud...");
 
     client = new Paho.MQTT.Client(BROKER_URL, BROKER_PORT, MY_CLIENT_ID);
     client.onConnectionLost = onConnectionLost;
@@ -230,29 +230,57 @@ async function enterRoom(pin) {
       useSSL: true, cleanSession: false, keepAliveInterval: 30, timeout: 3,
       onSuccess: onConnect,
       onFailure: (err) => {
-        setConnectionStatus(false, currentPin.substring(0, 4) + "***", "Connection Error");
+        setConnectionStatus(false, currentPin.substring(0, 4) + "*", "Connection Error");
         alert("Unable to connect to server.");
       }
     });
 }
 
+function disconnect() {
+  isReconnecting = false;
+  offlineQueue = []; 
+  if (client) { try { client.disconnect(); } catch(e){} }
+  
+  client = null; 
+  cryptoKey = null; 
+  currentPin = "";
+  currentTopic = "";
+  localChatHistory = [];
+  
+  const pinInput = document.getElementById('pin_input');
+  if (pinInput) pinInput.value = '';
+  resetInputState();
+  document.getElementById('chat-messages').innerHTML = '';
+
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Disconnected."; }, 500);
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Disconnected.."; }, 800);
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Disconnected..."; }, 1100);
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Chat Deletion."; }, 1400);
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Chat Deletion.."; }, 1800);
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Chat Deletion..."; }, 2200);
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Clearing Data."; }, 2500);
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Clearing Data.."; }, 2800);
+  setTimeout(() => { document.getElementById('status-text').innerHTML = "Clearing Data..."; }, 3100);
+  setTimeout(() => { document.getElementById('status-text').innerHTML = ""; }, 3400);
+
+  const chatScreen = document.getElementById('chat-screen');
+  if (chatScreen) chatScreen.classList.remove('chat-focus-in');
+
+  if (savedRooms.length > 0) {
+      renderRoomList();
+      showScreen('room-list-screen');
+  } else {
+      showScreen('login-screen');
+  }
+}
+
+
 function backToRoomList() {
-    if (client) { try { client.disconnect(); } catch(e){} }
-    client = null; 
-    
-    currentPin = "";
-    cryptoKey = null;
-    currentTopic = "";
-    localChatHistory = [];
-    
-    document.getElementById('chat-messages').innerHTML = '';
-    
-    renderRoomList();
-    showScreen('room-list-screen');
+    disconnect();
 }
 
 function onConnect() {
-  setConnectionStatus(true, currentPin.substring(0, 4) + "***", "Online");
+  setConnectionStatus(true, currentPin.substring(0, 4) + "*", "Online");
   client.subscribe(`blackchat/room/${currentTopic}`, { qos: 1 });
   client.subscribe(`blackchat/users/${currentTopic}/push_id`, { qos: 1 });
   setupPushIdentity();
@@ -273,7 +301,7 @@ function reconnect() {
     if (!currentPin || !client || client.isConnected() || isReconnecting) return;
     
     isReconnecting = true;
-    setConnectionStatus(false, currentPin.substring(0, 4) + "***", "Reconnecting...");
+    setConnectionStatus(false, currentPin.substring(0, 4) + "*", "Reconnecting...");
 
     client.connect({
         useSSL: true, cleanSession: false, keepAliveInterval: 30, timeout: 3,
@@ -289,38 +317,10 @@ function reconnect() {
 }
 
 function onConnectionLost(responseObject) {
-  setConnectionStatus(false, currentPin.substring(0, 4) + "***", `Disconnected`);
+  setConnectionStatus(false, currentPin.substring(0, 4) + "*", `Disconnected`);
   if (responseObject.errorCode !== 0 && currentPin) {
     setTimeout(reconnect, 1000);
   }
-}
-
-function disconnect() {
-  isReconnecting = false;
-  offlineQueue = []; 
-  if (client) { try { client.disconnect(); } catch(e){} }
-  client = null; cryptoKey = null; currentPin = "";
-  
-  const pinInput = document.getElementById('pin_input');
-  if (pinInput) pinInput.value = '';
-  resetInputState();
-
-  setTimeout(() => { document.getElementById('status-text').innerHTML = "Disconnected."; }, 500);
-  setTimeout(() => { document.getElementById('status-text').innerHTML = "Disconnected.."; }, 800);
-  setTimeout(() => { document.getElementById('status-text').innerHTML = "Disconnected..."; }, 1100);
-
-  setTimeout(() => { document.getElementById('status-text').innerHTML = "Chat Deletion."; }, 1400);
-  setTimeout(() => { document.getElementById('status-text').innerHTML = "Chat Deletion.."; }, 1800);
-  setTimeout(() => { document.getElementById('status-text').innerHTML = "Chat Deletion..."; }, 2200);
-
-  setTimeout(() => { document.getElementById('status-text').innerHTML = "Clearing Data."; }, 2500);
-  setTimeout(() => { document.getElementById('status-text').innerHTML = "Clearing Data.."; }, 2800);
-  setTimeout(() => { document.getElementById('status-text').innerHTML = "Clearing Data..."; }, 3100);
-  setTimeout(() => { document.getElementById('status-text').innerHTML = ""; }, 3400);
-
-  showScreen('login-screen');
-  const chatScreen = document.getElementById('chat-screen');
-  if (chatScreen) chatScreen.classList.remove('chat-focus-in');
 }
 
 // --- Message Handlers ---
@@ -339,7 +339,12 @@ async function onMessageArrived(message) {
   if (data.type === 'WIPE') {
       localChatHistory = [];
       localStorage.removeItem(`bchat_history_${currentPin}`);
+      
+      savedRooms = savedRooms.filter(pin => pin !== currentPin);
+      localStorage.setItem('bchat_rooms', JSON.stringify(savedRooms));
+      
       rebuildChatUI(localChatHistory);
+      disconnect(); 
       return;
   }
 
@@ -388,6 +393,10 @@ async function sendMessage() {
   if (text === `wipe`) { 
       localChatHistory = []; 
       localStorage.removeItem(`bchat_history_${currentPin}`); 
+      
+      savedRooms = savedRooms.filter(pin => pin !== currentPin);
+      localStorage.setItem('bchat_rooms', JSON.stringify(savedRooms));
+
       rebuildChatUI(localChatHistory);
 
       const payloadObj = { type: 'WIPE', senderId: MY_CLIENT_ID };
@@ -398,6 +407,7 @@ async function sendMessage() {
       queueOrSend(message, false);
       
       resetInputState(); 
+      disconnect(); 
       return; 
   }
 
@@ -583,6 +593,42 @@ function handleLocation(e) {
   });
 }
 
+function enterRoomWithRipple(pin, event) {
+    const roomItem = event.currentTarget;
+    const avatar = roomItem.querySelector('.room-avatar');
+    
+    if (!avatar) {
+        enterRoom(pin);
+        return;
+    }
+
+    const rect = avatar.getBoundingClientRect();
+    
+    const expander = document.createElement('div');
+    expander.className = 'avatar-expander';
+    expander.style.top = rect.top + 'px';
+    expander.style.left = rect.left + 'px';
+    expander.style.width = rect.width + 'px';
+    expander.style.height = rect.height + 'px';
+    
+    document.body.appendChild(expander);
+
+    void expander.offsetWidth;
+
+    expander.classList.add('expand');
+
+    setTimeout(() => {
+        enterRoom(pin);
+        
+        expander.classList.add('fade-out');
+        
+        setTimeout(() => {
+            expander.remove();
+        }, 400);
+        
+    }, 400);
+}
+
 window.sendMessage = sendMessage;
 window.enterRoom = enterRoom;
 window.backToRoomList = backToRoomList;
@@ -630,20 +676,17 @@ if (connectBtn) {
     });
 }
 
-// --- GESTIONE OVERLAY NUOVA STANZA ---
 const addRoomBtn = document.getElementById('add-room-btn');
 const newRoomOverlay = document.getElementById('new-room-overlay');
 const overlayConnectBtn = document.getElementById('overlay-connect-btn');
 const overlayPinInput = document.getElementById('overlay_room_pin');
 
 if (addRoomBtn && newRoomOverlay) {
-    // 1. Apri l'overlay cliccando sul +
     addRoomBtn.addEventListener('click', () => {
         newRoomOverlay.classList.add('active');
         if (overlayPinInput) overlayPinInput.focus();
     });
 
-    // 2. Chiudi l'overlay se clicchi nello sfondo sfocato
     newRoomOverlay.addEventListener('click', (e) => {
         if (e.target === newRoomOverlay) {
             newRoomOverlay.classList.remove('active');
@@ -656,7 +699,6 @@ function handleOverlayConnect() {
     if (!overlayPinInput) return;
     const pin = overlayPinInput.value.trim();
     
-    // Gestione Errore: Shake sul bottone "attachment" dell'overlay
     if (pin.length < 8) {
         const statusOverlay = document.getElementById('overlay-status');
         if (statusOverlay) {
@@ -672,18 +714,15 @@ function handleOverlayConnect() {
         return;
     }
     
-    // Se il PIN è ok, chiudi l'overlay e connettiti
     newRoomOverlay.classList.remove('active');
     overlayPinInput.value = '';
     enterRoom(pin);
 }
 
-// Assegna il click al bottone "attachment" dell'overlay
 if (overlayConnectBtn) {
     overlayConnectBtn.addEventListener('click', handleOverlayConnect);
 }
 
-// Assegna l'invio e la pulizia errori all'input dell'overlay
 if (overlayPinInput) {
     overlayPinInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') handleOverlayConnect();
