@@ -12,6 +12,10 @@ let offlineQueue = [];
 let isReconnecting = false;
 let isPrivacyMode = false;
 let savedRooms = JSON.parse(localStorage.getItem('bchat_rooms')) || [];
+let roomNames = JSON.parse(localStorage.getItem('bchat_names')) || {};
+let pressTimer;
+let isLongPress = false;
+let selectedPinForOptions = null;
 
 // --- Initialization ---
 let storedClientId = localStorage.getItem("mqtt_client_id");
@@ -50,6 +54,13 @@ async function saveHistory() {
   try {
       const encryptedData = await encryptData(localChatHistory, cryptoKey);
       localStorage.setItem(`bchat_history_${currentPin}`, encryptedData);
+      
+      if (localChatHistory.length > 0) {
+          const lastMsg = localChatHistory[localChatHistory.length - 1];
+          localStorage.setItem(`bchat_meta_${currentPin}`, lastMsg.time);
+      } else {
+          localStorage.removeItem(`bchat_meta_${currentPin}`); 
+      }
   } catch (error) {}
 }
 
@@ -102,6 +113,30 @@ function resetInputState() {
   }
 }
 
+function formatLastActive(timestamp) {
+    if (!timestamp) return "Awaiting connection..."; 
+    
+    const date = new Date(parseInt(timestamp));
+    const now = new Date();
+    const isToday = date.getDate() === now.getDate() && date.getMonth() === 
+    now.getMonth() && date.getFullYear() === now.getFullYear();
+
+    if (isToday) {
+        return "Last active: " + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday = date.getDate() === yesterday.getDate() && date.getMonth() === 
+    yesterday.getMonth() && date.getFullYear() === yesterday.getFullYear();
+    
+    if (isYesterday) {
+        return "Last active: Yesterday";
+    }
+
+    return "Last active: " + date.toLocaleDateString();
+}
+
 // --- Push Notifications ---
 function setupPushIdentity() {
     if (window.OneSignalDeferred) {
@@ -140,6 +175,52 @@ async function sendPushNotification(targetId, text) {
 }
 
 // --- Connection Handlers ---
+const roomOptionsOverlay = document.getElementById('room-options-overlay');
+
+function showRoomOptions(pin) {
+    if (navigator.vibrate) navigator.vibrate(50); 
+    selectedPinForOptions = pin;
+    const displayPin = pin.substring(0, 4) + '*';
+    const currentName = roomNames[pin];
+    
+    document.getElementById('options-room-title').innerText = currentName ? currentName : `Room ${displayPin}`;
+    roomOptionsOverlay.classList.add('active');
+}
+
+document.getElementById('btn-close-options')?.addEventListener('click', () => {
+    roomOptionsOverlay.classList.remove('active');
+});
+
+document.getElementById('btn-remove-room')?.addEventListener('click', () => {
+    savedRooms = savedRooms.filter(p => p !== selectedPinForOptions);
+    localStorage.setItem('bchat_rooms', JSON.stringify(savedRooms));
+    delete roomNames[selectedPinForOptions];
+    localStorage.setItem('bchat_names', JSON.stringify(roomNames));
+    
+    roomOptionsOverlay.classList.remove('active');
+    renderRoomList();
+});
+
+document.getElementById('btn-custom-name')?.addEventListener('click', () => {
+    roomOptionsOverlay.classList.remove('active');
+    
+    setTimeout(() => {
+        const currentName = roomNames[selectedPinForOptions] || "";
+        const newName = prompt("Enter a custom name for this room:", currentName);
+        
+        if (newName !== null) {
+            if (newName.trim() === "") {
+                delete roomNames[selectedPinForOptions]; 
+            } else {
+                roomNames[selectedPinForOptions] = newName.trim();
+            }
+            localStorage.setItem('bchat_names', JSON.stringify(roomNames));
+            renderRoomList();
+        }
+    }, 300);
+});
+
+
 function renderRoomList() {
     const container = document.getElementById('room-list-container');
     if (!container) return;
@@ -147,17 +228,52 @@ function renderRoomList() {
     
     savedRooms.forEach(pin => {
         const displayPin = pin.substring(0, 4) + '*'; 
+        const lastActiveRaw = localStorage.getItem(`bchat_meta_${pin}`);
+        const lastActiveText = formatLastActive(lastActiveRaw);
+        
+        const roomTitle = roomNames[pin] ? roomNames[pin] : `Room ${displayPin}`;
+
         const roomDiv = document.createElement('div');
         roomDiv.className = 'room-item';
+        
+        roomDiv.oncontextmenu = (e) => { e.preventDefault(); return false; };
+
         roomDiv.innerHTML = `
           <div class="room-avatar"><ion-icon name="lock-closed"></ion-icon></div>
           <div class="room-details">
-            <div class="room-name">Room ${displayPin}</div>
-            <div class="room-last-msg">Tap To Connect..</div>
+            <div class="room-name">${roomTitle}</div>
+            <div class="room-last-msg">${lastActiveText}</div>
           </div>
         `;
 
-        roomDiv.onclick = (e) => enterRoomWithRipple(pin, e);
+        const startPress = (e) => {
+            isLongPress = false;
+            pressTimer = setTimeout(() => {
+                isLongPress = true;
+                showRoomOptions(pin);
+            }, 600);
+        };
+
+        const cancelPress = () => {
+            clearTimeout(pressTimer);
+        };
+
+        roomDiv.addEventListener('mousedown', startPress);
+        roomDiv.addEventListener('touchstart', startPress, { passive: true });
+        
+        roomDiv.addEventListener('mouseup', cancelPress);
+        roomDiv.addEventListener('mouseleave', cancelPress);
+        roomDiv.addEventListener('touchend', cancelPress);
+        roomDiv.addEventListener('touchmove', cancelPress);
+
+        roomDiv.onclick = (e) => {
+            if (isLongPress) {
+                e.preventDefault();
+                return;
+            }
+            enterRoomWithRipple(pin, e);
+        };
+
         container.appendChild(roomDiv);
     });
 }
@@ -339,6 +455,7 @@ async function onMessageArrived(message) {
   if (data.type === 'WIPE') {
       localChatHistory = [];
       localStorage.removeItem(`bchat_history_${currentPin}`);
+      localStorage.removeItem(`bchat_meta_${currentPin}`);
       
       savedRooms = savedRooms.filter(pin => pin !== currentPin);
       localStorage.setItem('bchat_rooms', JSON.stringify(savedRooms));
@@ -384,7 +501,8 @@ async function sendMessage() {
   
   if (text === `clear`) { 
       localChatHistory = []; 
-      localStorage.removeItem(`bchat_history_${currentPin}`); 
+      localStorage.removeItem(`bchat_history_${currentPin}`);
+      localStorage.removeItem(`bchat_meta_${currentPin}`); 
       document.getElementById("chat-messages").innerHTML = ''; 
       resetInputState(); 
       return; 
@@ -393,6 +511,7 @@ async function sendMessage() {
   if (text === `wipe`) { 
       localChatHistory = []; 
       localStorage.removeItem(`bchat_history_${currentPin}`); 
+      localStorage.removeItem(`bchat_meta_${currentPin}`);
       
       savedRooms = savedRooms.filter(pin => pin !== currentPin);
       localStorage.setItem('bchat_rooms', JSON.stringify(savedRooms));

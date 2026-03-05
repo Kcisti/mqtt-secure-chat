@@ -59,31 +59,43 @@
 
     <div id="room-list-screen" class="screen">
   
-  <div class="room-list-header">
-    <h2 class="room-list-title">Rooms List</h2>
-    <button id="add-room-btn" class="icon-btn-add">
-      <ion-icon name="add-outline"></ion-icon>
-    </button>
-  </div>
-
-  <div class="room-list-body" id="room-list-container"></div>
-
-  <div id="new-room-overlay" class="new-room-overlay">
-    <div class="new-room-modal">
-      <h3 style="color: var(--text-main); margin-bottom: 15px; text-align: center; font-weight: 500;">Enter New Secure Room</h3>
-      
-      <div class="input-container">
-        <input type="password" id="overlay_room_pin" placeholder="E.g. 1234-5678" autocomplete="off">
-        <button id="overlay-connect-btn" class="overlay-attach-btn">
-          <ion-icon name="enter"></ion-icon>
+      <div class="room-list-header">
+        <h2 class="room-list-title">Secure Room</h2>
+        <button id="add-room-btn" class="icon-btn-add">
+          <ion-icon name="add-outline"></ion-icon>
         </button>
       </div>
-      
-      <div id="overlay-status"></div>
-    </div>
-  </div>
+    
+      <div class="room-list-body" id="room-list-container"></div>
+    
+      <div id="new-room-overlay" class="new-room-overlay">
+        <div class="new-room-modal">
+          <h3 >Enter New Secure Room</h3>
 
-</div>
+          <div class="input-container">
+            <input type="search" id="overlay_room_pin" placeholder="E.g. 1234-5678" autocomplete="off">
+            <button id="overlay-connect-btn" class="overlay-attach-btn">
+              <ion-icon name="enter"></ion-icon>
+            </button>
+          </div>
+
+          <div id="overlay-status"></div>
+        </div>
+      </div>
+
+      <div id="room-options-overlay" class="new-room-overlay">
+        <div class="new-room-modal" style="padding-bottom: 20px;">
+          <h3 id="options-room-title" style="color: var(--text-main); margin-bottom: 20px; text-align: center; font-weight: 500;">Room Options</h3>
+
+          <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 20px;">
+            <button id="btn-custom-name" class="option-btn">Set Custom Name</button>
+            <button id="btn-remove-room" class="option-btn" style="background-color: var(--danger);">Remove Room</button>
+            <button id="btn-close-options" class="option-btn" style="background-color: var(--bubble-peer);">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
 
     <div id="chat-screen" class="screen">
       <div class="chat-header">
