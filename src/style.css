@@ -22,6 +22,46 @@
   --border-color: #262626; 
 
   --bord-rads: 12px;
+
+  --transition-bg: rgba(7, 7, 7, 0.973);
+}
+
+body.light-theme {
+  --bg-body: #f0f2f5;
+  --bg-app: #ffffff;
+  --bg-panel: #f4f4f4; 
+  --bg-panel-hover: #eaeaec; 
+  
+  --text-main: #111827;
+  --text-muted: #6b7280;
+
+  --bubble-peer: #e2e2e6; 
+  
+  --border-color: #e5e7eb;
+  --transition-bg: rgba(255, 255, 255, 0.96); 
+}
+body.light-theme .room-avatar {
+  background-color: #ceced1;
+}
+
+body.pink-theme {
+  --bg-body: #ffe8f0;        
+  --bg-app: #fff5f9;         
+  --bg-panel: #ffdeea;       
+  --bg-panel-hover: #ffd1e1; 
+  
+  --text-main: #523040; 
+  --text-muted: #b8829a;
+
+  --primary: #ff2aad;          
+  --primary-hover: #e61996;    
+  --bubble-me: #ff2aad;        
+
+  --bubble-peer: #ffffff;   
+  
+  --border-color: #ffc4d9;    
+  --transition-bg: rgba(255, 245, 249, 0.98); 
+
 }
 
 /* ========================================= */
@@ -130,7 +170,7 @@ input {
   border-radius: var(--bord-rads);
   border: none;
   background-color: var(--bubble-peer);
-  color: white;
+  color: var(--text-main);
   font-size: 1.2rem;
   outline: none;
   transition: border 0.2s;
@@ -149,7 +189,7 @@ button {
   flex: 1 1 auto;
   flex-shrink: 0;
   background-color: var(--primary);
-  color: white;
+  color: var(--text-main);
   border: none;
   padding: 12px 20px;
   border-radius: var(--bord-rads);
@@ -185,16 +225,16 @@ button {
   margin: 0;
 }
 
-.icon-btn-add {
-  background-color: var(--primary);
+.header-icon-btn {
+  background-color: transparent;
   flex: 0 ;
   color: var(--text-main);
   border: none;
-  font-size: 2.35rem;
-  font-weight: 700;
+  font-size: 1.68rem;
+  font-weight: 400;
   cursor: pointer;
   transition: transform 0.2s, color 0.2s;
-  padding:  0.5rem;
+  padding:  0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -202,7 +242,32 @@ button {
   height: 45px;
 }
 
-.icon-btn-add ion-icon:active {
+.action-item.cancel {
+  text-align: center;
+  font-weight: 500;
+  border-top: 1px solid #3a3a42;
+  border-bottom: none;
+}
+
+.icon-btn-add {
+  background-color: var(--primary);
+  flex: 0 ;
+  position: fixed;bottom:5rem;right: 3rem;
+  color: #ffffff;
+  border: none;
+  font-size: 2.45rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s, color 0.2s;
+  padding:  0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+}
+
+.icon-btn-add ion-icon:active, .header-icon-btn ion-icon:active {
   transform: scale(0.8);
 }
 
@@ -265,7 +330,7 @@ button {
 }
 
 .action-menu {
-  background-color:  var(--bubble-peer);  
+  background-color:  var(--bg-panel);  
   border-radius: var(--bord-rads);
   width: 45%; 
   overflow: hidden;
@@ -298,7 +363,7 @@ button {
   padding: 0.7rem 1rem;
   font-size: 1rem;
   color: var(--text-muted);
-  border-bottom: 1px solid #3a3a42;
+  border-bottom: 1px solid var(--border-color); 
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -318,11 +383,18 @@ button {
   cursor: pointer;
   transition: background-color 0.2s;
   font-weight: 400;
-  border-bottom: 1px solid #3a3a42;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .action-item:active {
-  background-color: #3a3a42;
+  background-color: var(--bg-panel-hover); 
+}
+
+.action-item.cancel {
+  text-align: center;
+  font-weight: 500;
+  border-top: 1px solid var(--border-color); 
+  border-bottom: none;
 }
 
 .action-item.danger {
@@ -330,10 +402,48 @@ button {
   border: 0;
 }
 
-.action-item.cancel {
-  margin: 0;
+
+/* ========================================= */
+/* GLOBAL OPTIONS MENU (Bottom Sheet)        */
+/* ========================================= */
+
+#global-options-overlay{
+  align-items: flex-start;
+  padding: 2.5rem 1.5rem;
+}
+
+#global-action-menu{
+  width: 100%;
+}
+
+#global-options-overlay .action-menu {
+  transform: translateY(-100%);
+  opacity: 1;
+  transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+#global-options-overlay.active .action-menu {
+  transform: translateY(0); 
+}
+
+#global-menu-header,#btn-global-wipe,
+#btn-global-theme{
+  height: 50px;
+  font-size: 1.12rem;
+  display: flex;
+  align-items: center;
   color: var(--text-muted);
 }
+
+#global-menu-header{
+  font-size: 1.25rem;
+  color: var(--text-main);
+}
+
+#btn-global-wipe{
+  color: var(--danger);
+}
+
 
 /* ========================================= */
 /* 6. NEW ROOM OVERLAY (GLASSMORPHISM)       */
@@ -347,7 +457,7 @@ button {
   z-index: 9999;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-end; 
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.5s ease;
@@ -359,9 +469,12 @@ button {
 }
 
 .new-room-modal {
-  width: 75%;
-  max-width: 400px;
-  transform: translateY(20px);
+  width: 100%; 
+  max-width: 100%;
+  background-color: transparent;
+  padding: 1.2rem 1.5rem ;
+  border-radius: 20px 20px 0 0;
+  transform: translateY(100%); 
   transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -369,12 +482,18 @@ button {
   transform: translateY(0); 
 }
 
-.new-room-modal h3{
-  color: var(--text-main); 
-  margin-bottom: 15px; 
-  text-align: center; 
-  font-weight: 500; 
-  font-size: 1.2rem;
+@media (min-width: 640px) {
+  .new-room-overlay {
+    align-items: center; 
+  }
+
+  .new-room-modal {
+    width: 75%;
+    max-width: 400px; 
+    padding: 2rem;
+    border-radius: var(--bord-rads);
+    transform: translateY(20px);
+  }
 }
 
 .overlay-attach-btn {
@@ -490,6 +609,7 @@ button {
 .me .msg-bubble { 
   background-color: var(--bubble-me);
   border-bottom-right-radius: 2px;
+  color: #ffffff;
 }
 
 .peer .msg-bubble { 
@@ -525,7 +645,7 @@ button {
   flex: 1; 
   min-width: 0;
   background-color: var(--bubble-peer);
-  color: white;
+  color: var(--text-main);
   font-size: 1.28rem;
   outline: none;
   transition: border 0.2s;
@@ -562,11 +682,11 @@ button {
   flex: none;
   border-radius: 16px;
   background-color: var(--primary);
-  color: var(--text-main);
   border: none;
   font-size: 1.6rem;
   cursor: pointer;
   transition: 0.2s;
+  color: #ffffff;
 }
 
 #attach-btn:active, #send-btn:active {
@@ -718,7 +838,7 @@ button {
 
 #close-viewer-btn ion-icon {
   font-size: 1.8rem;
-  color: white;
+  color: var(--text-main);
 }
 
 #close-viewer-btn:active {
@@ -826,20 +946,24 @@ button {
   }
 }
 
-.avatar-expander {
+.dark-transition-expander {
   position: fixed;
-  border-radius: 50%;
-  background-color: var(--bubble-peer); 
-  z-index: 99999; 
+  top: 50%;
+  left: 50%;
+  width: 150vmax; 
+  height: 150vmax;
+  background-color: var(--transition-bg);
+  border-radius: 50%; 
+  transform: translate(-50%, -50%) scale(0);
+  z-index: 99999;
   pointer-events: none;
-  transform-origin: center center;
-  transition: transform 2s cubic-bezier(0.4, 0, 0.2, 1), opacity 1.8s ease;
+  transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease;
 }
 
-.avatar-expander.expand {
-  transform: scale(100); 
+.dark-transition-expander.expand {
+  transform: translate(-50%, -50%) scale(1); 
 }
 
-.avatar-expander.fade-out {
+.dark-transition-expander.fade-out {
   opacity: 0; 
 }

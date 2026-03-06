@@ -542,6 +542,18 @@ async function sendMessage() {
       return; 
   }
 
+  if (text.toLowerCase() === `sweet pink muffin`) {
+      document.body.classList.remove('light-theme'); 
+      const isPink = document.body.classList.toggle('pink-theme');
+      
+     
+      localStorage.setItem('bchat_theme', isPink ? 'pink' : 'dark');
+      
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      resetInputState(); 
+      return; 
+  }
+
   const msgIdText = Date.now() + '-txt-' + Math.random().toString(36).substr(2, 9);
   const msgObjText = { id: msgIdText, sender: 'me', text: text, time: Date.now(), isBomb: isBombActive };
   
@@ -725,40 +737,25 @@ function handleLocation(e) {
 }
 
 function enterRoomWithRipple(pin, event) {
-    const roomItem = event.currentTarget;
-    const avatar = roomItem.querySelector('.room-avatar');
-    
-    if (!avatar) {
-        enterRoom(pin);
-        return;
-    }
-
-    const rect = avatar.getBoundingClientRect();
-    
     const expander = document.createElement('div');
-    expander.className = 'avatar-expander';
-    expander.style.top = rect.top + 'px';
-    expander.style.left = rect.left + 'px';
-    expander.style.width = rect.width + 'px';
-    expander.style.height = rect.height + 'px';
-    
+    expander.className = 'dark-transition-expander';
     document.body.appendChild(expander);
 
-    void expander.offsetWidth;
+    void expander.offsetWidth; 
 
     expander.classList.add('expand');
 
     setTimeout(() => {
         enterRoom(pin);
-        
         expander.classList.add('fade-out');
         
         setTimeout(() => {
             expander.remove();
-        }, 400);
+        }, 600); 
         
-    }, 400);
+    }, 500); 
 }
+
 
 window.sendMessage = sendMessage;
 window.enterRoom = enterRoom;
@@ -1033,3 +1030,77 @@ window.addEventListener("online", () => {
         reconnect();
     }
 });
+
+
+const btnGlobalOptions = document.getElementById('btn-global-options');
+const globalOptionsOverlay = document.getElementById('global-options-overlay');
+
+if (btnGlobalOptions && globalOptionsOverlay) {
+    btnGlobalOptions.addEventListener('click', () => {
+        globalOptionsOverlay.classList.add('active');
+    });
+
+    globalOptionsOverlay.addEventListener('click', (e) => {
+        if (e.target === globalOptionsOverlay) {
+            globalOptionsOverlay.classList.remove('active');
+        }
+    });
+}
+
+
+const btnGlobalWipe = document.getElementById('btn-global-wipe');
+if (btnGlobalWipe) {
+    btnGlobalWipe.addEventListener('click', () => {
+        const confirmWipe = confirm("⚠️ WIPE ALL DATA?\n\nThis will permanently delete all rooms, messages, and cryptographic keys from this device. Cannot be undone.");
+        
+        if (confirmWipe) {
+            savedRooms.forEach(pin => {
+                localStorage.removeItem(`bchat_history_${pin}`);
+                localStorage.removeItem(`bchat_meta_${pin}`);
+            });
+            localStorage.removeItem('bchat_rooms');
+            localStorage.removeItem('bchat_names');
+            savedRooms = [];
+            roomNames = {};
+            
+            globalOptionsOverlay.classList.remove('active');
+            renderRoomList();
+            showScreen('login-screen');
+        } else {
+            globalOptionsOverlay.classList.remove('active');
+        }
+    });
+}
+
+const savedTheme = localStorage.getItem('bchat_theme');
+if (savedTheme === 'light') {
+    document.body.classList.add('light-theme');
+} else if (savedTheme === 'pink') {
+    document.body.classList.add('pink-theme');
+}
+
+const btnGlobalTheme = document.getElementById('btn-global-theme');
+if (btnGlobalTheme) {
+    btnGlobalTheme.addEventListener('click', () => {
+        if (document.body.classList.contains('pink-theme')) {
+            document.body.classList.remove('pink-theme');
+            document.body.classList.add('light-theme');
+            localStorage.setItem('bchat_theme', 'light');
+        } else {
+            const isLight = document.body.classList.toggle('light-theme');
+            localStorage.setItem('bchat_theme', isLight ? 'light' : 'dark');
+        }
+        
+        if (navigator.vibrate) navigator.vibrate(50);
+    });
+}
+
+
+
+
+
+
+
+
+
+

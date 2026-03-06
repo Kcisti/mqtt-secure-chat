@@ -61,17 +61,28 @@
   
       <div class="room-list-header">
         <h2 class="room-list-title">Secure Room</h2>
-        <button id="add-room-btn" class="icon-btn-add">
-          <ion-icon name="add-outline"></ion-icon>
+        
+        <button id="btn-global-options" class="header-icon-btn" >
+          <ion-icon name="ellipsis-vertical"></ion-icon>
         </button>
+   
       </div>
     
       <div class="room-list-body" id="room-list-container"></div>
+
+      <div id="global-options-overlay" class="new-room-overlay">
+        <div class="action-menu" id="global-action-menu">
+          <div class="action-menu-header" id="global-menu-header">
+            <span>App Settings</span>
+          </div>
+          <button id="btn-global-theme" class="action-item theme">Change Theme</button>
+          <button id="btn-global-wipe" class="action-item danger">Wipe All Data</button>
+          <div class="action-menu-divider"></div>
+        </div>
+      </div>
     
       <div id="new-room-overlay" class="new-room-overlay">
         <div class="new-room-modal">
-          <h3 >Enter New Secure Room</h3>
-
           <div class="input-container">
             <input type="search" id="overlay_room_pin" placeholder="E.g. 1234-5678" autocomplete="off">
             <button id="overlay-connect-btn" class="overlay-attach-btn">
@@ -99,7 +110,10 @@
         </div>
       </div>
 
-      </div>
+      <button id="add-room-btn" class="icon-btn-add">
+        <ion-icon name="add"></ion-icon>
+      </button>
+    </div>
 
   
 
