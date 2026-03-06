@@ -520,26 +520,35 @@ async function sendMessage() {
       return; 
   }
 
-  if (text === `wipe`) { 
-      localChatHistory = []; 
-      localStorage.removeItem(`bchat_history_${currentPin}`); 
-      localStorage.removeItem(`bchat_meta_${currentPin}`);
-      
-      savedRooms = savedRooms.filter(pin => pin !== currentPin);
-      localStorage.setItem('bchat_rooms', JSON.stringify(savedRooms));
+  if (text.toLowerCase() === 'wipe') {
+    localStorage.removeItem(`bchat_history_${currentPin}`);
+    localStorage.removeItem(`bchat_meta_${currentPin}`);
 
-      rebuildChatUI(localChatHistory);
+    savedRooms = savedRooms.filter(pin => pin !== currentPin);
+    localStorage.setItem('bchat_rooms', JSON.stringify(savedRooms));
+    
+    if (roomNames[currentPin]) {
+        delete roomNames[currentPin];
+        localStorage.setItem('bchat_names', JSON.stringify(roomNames));
+    }
+    localChatHistory = [];
+    currentPin = "";
+    currentTopic = "";
+    cryptoKey = null;
 
-      const payloadObj = { type: 'WIPE', senderId: MY_CLIENT_ID };
-      const encrypted = await encryptData(payloadObj, cryptoKey);
-      const message = new Paho.MQTT.Message(encrypted);
-      message.destinationName = `blackchat/room/${currentTopic}`;
-      message.qos = 1; message.retained = true; 
-      queueOrSend(message, false);
+    if (client && client.isConnected()) {
+        client.disconnect();
+    }
+
+    document.getElementById('message_input').value = '';
+    resetInputState();
+    
+    renderRoomList();
+    showScreen('room-list-screen');
+    
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
       
-      resetInputState(); 
-      disconnect(); 
-      return; 
+    return; 
   }
 
   if (text.toLowerCase() === `sweet pink muffin`) {

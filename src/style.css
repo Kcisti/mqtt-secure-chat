@@ -255,7 +255,7 @@ button {
   position: fixed;bottom:5rem;right: 3rem;
   color: #ffffff;
   border: none;
-  font-size: 2.45rem;
+  font-size: 2.58rem;
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.2s, color 0.2s;
@@ -263,8 +263,8 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 58px;
-  height: 58px;
+  width: 62px;
+  height: 62px;
 }
 
 .icon-btn-add ion-icon:active, .header-icon-btn ion-icon:active {
@@ -361,7 +361,7 @@ button {
 
 .action-menu-header {
   padding: 0.7rem 1rem;
-  font-size: 1rem;
+  font-size: 1.15rem;
   color: var(--text-muted);
   border-bottom: 1px solid var(--border-color); 
   font-weight: 500;
@@ -376,10 +376,10 @@ button {
   width: 100%;
   padding: 0.7rem 1rem;
   text-align: left;
-  font-size: 1rem;
+  font-size: 1.15rem;
   border-radius: 0;
   color: var(--text-main);
-  height: 40px;
+  height: 45px;
   cursor: pointer;
   transition: background-color 0.2s;
   font-weight: 400;
@@ -428,15 +428,15 @@ button {
 
 #global-menu-header,#btn-global-wipe,
 #btn-global-theme{
-  height: 50px;
-  font-size: 1.12rem;
+  height: 52px;
+  font-size: 1.25rem;
   display: flex;
   align-items: center;
   color: var(--text-muted);
 }
 
 #global-menu-header{
-  font-size: 1.25rem;
+  font-size: 1.28rem;
   color: var(--text-main);
 }
 
