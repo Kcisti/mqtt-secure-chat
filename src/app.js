@@ -1,6 +1,6 @@
 import { hashPinForTopic, deriveKey, encryptData, decryptData } from './crypto.js';
 import { scrollToBottom, showScreen, setConnectionStatus, addMessageToUI, rebuildChatUI, playNotificationSound, applyPrivacyMode, closeImageViewer } from './ui.js';
-
+//npx cap copy android
 // --- Global State ---
 let client = null;
 let cryptoKey = null;
@@ -13,9 +13,11 @@ let isReconnecting = false;
 let isPrivacyMode = false;
 let savedRooms = JSON.parse(localStorage.getItem('bchat_rooms')) || [];
 let roomNames = JSON.parse(localStorage.getItem('bchat_names')) || {};
+let lastPushSentTime = 0; 
 let pressTimer;
 let isLongPress = false;
 let selectedPinForOptions = null;
+
 
 // --- Initialization ---
 let storedClientId = localStorage.getItem("mqtt_client_id");
@@ -35,7 +37,15 @@ function messageExists(id) {
 function queueOrSend(message, requiresPush = false) {
     if (client && client.isConnected()) {
         client.send(message);
-        if (requiresPush && peerPushId) sendPushNotification(peerPushId, "New Secure Message");
+        
+        if (requiresPush && peerPushId) {
+            const now = Date.now();
+
+            if (now - lastPushSentTime > 10000000) {
+                sendPushNotification(peerPushId, "New Secure Message");
+                lastPushSentTime = now;
+            }
+        }
     } else {
         offlineQueue.push({ msg: message, push: requiresPush });
     }
@@ -138,23 +148,42 @@ function formatLastActive(timestamp) {
 }
 
 // --- Push Notifications ---
+
 function setupPushIdentity() {
-    if (window.OneSignalDeferred) {
+    const broadcastId = (id) => {
+        if (!id) return;
+
+        const pushTopic = `blackchat/users/${currentTopic}/${MY_CLIENT_ID}/push_id`;
+        const payload = JSON.stringify({ pushId: id, mqttId: MY_CLIENT_ID });
+        const message = new Paho.MQTT.Message(payload);
+        message.destinationName = pushTopic;
+        message.retained = true;
+        queueOrSend(message, false);
+    };
+
+
+    if (window.plugins && window.plugins.OneSignal) {
+        const os = window.plugins.OneSignal;
+
+        setTimeout(() => {
+            const nativeId = os.User.pushSubscription.id;
+            if (nativeId) broadcastId(nativeId);
+        }, 1000);
+
+        os.User.pushSubscription.addEventListener("change", function(event) {
+            if (event.current && event.current.id) broadcastId(event.current.id);
+        });
+    } 
+
+    else if (window.OneSignalDeferred) {
         window.OneSignalDeferred.push(function(OneSignal) {
-            const broadcastId = (id) => {
-                if (!id) return;
-                const pushTopic = `blackchat/users/${currentTopic}/push_id`;
-                const payload = JSON.stringify({ pushId: id, mqttId: MY_CLIENT_ID });
-                const message = new Paho.MQTT.Message(payload);
-                message.destinationName = pushTopic;
-                message.retained = true;
-                queueOrSend(message, false);
-            };
-            const currentId = OneSignal.User.PushSubscription.id;
-            if (currentId) broadcastId(currentId);
+            setTimeout(() => {
+                const webId = OneSignal.User.PushSubscription.id;
+                if (webId) broadcastId(webId);
+            }, 1000);
 
             OneSignal.User.PushSubscription.addEventListener("change", function(event) {
-                if (event.current.id) broadcastId(event.current.id);
+                if (event.current && event.current.id) broadcastId(event.current.id);
             });
             OneSignal.Slidedown.promptPush();
         });
@@ -216,6 +245,10 @@ document.getElementById('btn-remove-room')?.addEventListener('click', () => {
 document.getElementById('btn-custom-name')?.addEventListener('click', () => {
     roomOptionsOverlay.classList.remove('active');
     
+    if (document.activeElement) {
+        document.activeElement.blur();
+    }
+
     setTimeout(() => {
         const currentName = roomNames[selectedPinForOptions] || "";
         const newName = prompt("Enter a custom name for this room:", currentName);
@@ -229,9 +262,17 @@ document.getElementById('btn-custom-name')?.addEventListener('click', () => {
             localStorage.setItem('bchat_names', JSON.stringify(roomNames));
             renderRoomList();
         }
-    }, 300);
-});
 
+        setTimeout(() => {
+            window.scrollTo(0, 0);
+            document.body.style.height = '99%';
+            window.requestAnimationFrame(() => {
+                document.body.style.height = '100%';
+            });
+        }, 100);
+
+    }, 500);
+});
 
 function renderRoomList() {
     const container = document.getElementById('room-list-container');
@@ -408,21 +449,28 @@ function backToRoomList() {
 }
 
 function onConnect() {
-  setConnectionStatus(true, currentPin.substring(0, 4) + "*", "Online");
-  client.subscribe(`blackchat/room/${currentTopic}`, { qos: 1 });
-  client.subscribe(`blackchat/users/${currentTopic}/push_id`, { qos: 1 });
-  setupPushIdentity();
+    setConnectionStatus(true, currentPin.substring(0, 4) + "*", "Online");
+    client.subscribe(`blackchat/room/${currentTopic}`, { qos: 1 });
 
-  if (offlineQueue.length > 0) {
-      let needsPush = false;
-      while(offlineQueue.length > 0) {
-          const item = offlineQueue.shift();
-          client.send(item.msg);
-          if (item.push) needsPush = true;
-      }
-      
-      if (needsPush && peerPushId) sendPushNotification(peerPushId, "New Secure Message");
-  }
+    client.subscribe(`blackchat/users/${currentTopic}/+/push_id`, { qos: 1 });
+    setupPushIdentity();
+
+    if (offlineQueue.length > 0) {
+        let needsPush = false;
+        while(offlineQueue.length > 0) {
+            const item = offlineQueue.shift();
+            client.send(item.msg);
+            if (item.push) needsPush = true;
+        }
+        
+        if (needsPush && peerPushId) {
+            const now = Date.now();
+            if (now - lastPushSentTime > 10000) {
+                sendPushNotification(peerPushId, "New Secure Message");
+                lastPushSentTime = now;
+            }
+        }
+    }
 }
 
 function reconnect() {
@@ -452,6 +500,25 @@ function onConnectionLost(responseObject) {
 }
 
 // --- Message Handlers ---
+
+function initOneSignalNativo() {
+    if (window.plugins && window.plugins.OneSignal) {
+        window.plugins.OneSignal.initialize("fbcbc6a0-8e00-4bd6-b389-c2fc6676ece2");
+        
+        window.plugins.OneSignal.Notifications.requestPermission(true).then(function(accepted) {
+            console.log(accepted);
+        });
+
+        window.plugins.OneSignal.Notifications.addEventListener('click', function(event) {
+            console.log('Notifica cliccata: ', event);
+        });
+    } else {
+        console.log("Plugin OneSignal non trovato. Siamo sul browser PC/PWA.");
+    }
+}
+document.addEventListener('deviceready', initOneSignalNativo, false);
+
+
 async function onMessageArrived(message) {
   if (message.destinationName.includes("push_id")) {
     try {
@@ -821,12 +888,14 @@ const overlayPinInput = document.getElementById('overlay_room_pin');
 if (addRoomBtn && newRoomOverlay) {
     addRoomBtn.addEventListener('click', () => {
         newRoomOverlay.classList.add('active');
+        addRoomBtn.style.display = 'none'; 
         if (overlayPinInput) overlayPinInput.focus();
     });
 
     newRoomOverlay.addEventListener('click', (e) => {
         if (e.target === newRoomOverlay) {
             newRoomOverlay.classList.remove('active');
+            addRoomBtn.style.display = 'flex'; 
             if (overlayPinInput) overlayPinInput.value = '';
         }
     });
@@ -850,8 +919,11 @@ function handleOverlayConnect() {
         }
         return;
     }
-    
+
     newRoomOverlay.classList.remove('active');
+    const addBtn = document.getElementById('add-room-btn');
+    if(addBtn) addBtn.style.display = 'flex';
+
     overlayPinInput.value = '';
     enterRoom(pin);
 }
@@ -1105,11 +1177,27 @@ if (btnGlobalTheme) {
 }
 
 
+if (window.Capacitor && window.Capacitor.Plugins.Keyboard) {
+    const Keyboard = window.Capacitor.Plugins.Keyboard;
 
+    Keyboard.addListener('keyboardWillShow', (info) => {
+        const appContainer = document.getElementById('app-container');
+        if (appContainer) {
+            const offsetAndroid = 57; 
+            
+            appContainer.style.bottom = `calc(${info.keyboardHeight}px - ${offsetAndroid}px)`
+            
+            setTimeout(() => {
+                const chat = document.getElementById("chat-messages");
+                if (chat) chat.scrollTop = chat.scrollHeight;
+            }, 100);
+        }
+    });
 
-
-
-
-
-
-
+    Keyboard.addListener('keyboardWillHide', () => {
+        const appContainer = document.getElementById('app-container');
+        if (appContainer) {
+            appContainer.style.bottom = '1rem'; 
+        }
+    });
+}
