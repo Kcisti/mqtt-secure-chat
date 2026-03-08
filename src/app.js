@@ -18,20 +18,45 @@ let pressTimer;
 let isLongPress = false;
 let selectedPinForOptions = null;
 
+const isNativeApp = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+if (isNativeApp) {
+    document.body.classList.add('is-native');
+} else {
+    document.body.classList.add('is-web');
+}
 
 // --- Initialization ---
+
 let storedClientId = localStorage.getItem("mqtt_client_id");
 if (!storedClientId) {
   storedClientId = "bc_user_" + Date.now() + "_" + Math.random().toString(16).substr(2, 8);
   localStorage.setItem("mqtt_client_id", storedClientId);
 }
 const MY_CLIENT_ID = storedClientId;
-const BROKER_URL = "broker.emqx.io"; 
-const BROKER_PORT = 8084; 
+
+
+let BROKER_URL = ""; 
+let BROKER_PORT = 8884; 
+let BROKER_USER = "";
+let BROKER_PASS = ""; 
 
 // --- Helpers ---
 function messageExists(id) {
   return localChatHistory.some(m => m.id === id);
+}
+
+async function fetchMqttCreds() {
+    if (BROKER_URL !== "") return;
+    try {
+        const res = await fetch("https://secure-room-proxy.mark-fili25.workers.dev/get-mqtt");
+        const creds = await res.json();
+        BROKER_URL = creds.url;
+        BROKER_USER = creds.user;
+        BROKER_PASS = creds.pass;
+    } catch (err) {
+        console.log("Error restore credentials MQTT");
+    }
 }
 
 function queueOrSend(message, requiresPush = false) {
@@ -406,12 +431,19 @@ async function enterRoom(pin) {
     showScreen('chat-screen');
     setConnectionStatus(false, currentPin.substring(0, 4) + "*", "Connecting to Cloud...");
 
+    await fetchMqttCreds();
+
     client = new Paho.MQTT.Client(BROKER_URL, BROKER_PORT, MY_CLIENT_ID);
     client.onConnectionLost = onConnectionLost;
     client.onMessageArrived = onMessageArrived;
 
     client.connect({
-      useSSL: true, cleanSession: false, keepAliveInterval: 30, timeout: 3,
+      userName: BROKER_USER, 
+      password: BROKER_PASS,
+      useSSL: true,
+      cleanSession: false, 
+      keepAliveInterval: 30, 
+      timeout: 3,
       onSuccess: onConnect,
       onFailure: (err) => {
         setConnectionStatus(false, currentPin.substring(0, 4) + "*", "Connection Error");
@@ -488,13 +520,17 @@ function onConnect() {
     }
 }
 
-function reconnect() {
+async function reconnect() {
     if (!currentPin || !client || client.isConnected() || isReconnecting) return;
     
     isReconnecting = true;
     setConnectionStatus(false, currentPin.substring(0, 4) + "*", "Reconnecting...");
 
+    await fetchMqttCreds();
+
     client.connect({
+        userName: BROKER_USER,
+        password: BROKER_PASS,
         useSSL: true, cleanSession: false, keepAliveInterval: 30, timeout: 3,
         onSuccess: () => {
             isReconnecting = false;
@@ -1267,26 +1303,6 @@ if (window.Capacitor && window.Capacitor.Plugins.Keyboard) {
         const appContainer = document.getElementById('app-container');
         if (appContainer) {
             appContainer.style.bottom = '1rem'; 
-        }
-    });
-} else if (window.visualViewport) {
-    
-    window.visualViewport.addEventListener('resize', () => {
-        const appContainer = document.getElementById('app-container');
-        if (appContainer) {
-            const keyboardHeight = window.innerHeight - window.visualViewport.height;
-            
-            if (keyboardHeight > 100) {
-
-                appContainer.style.bottom = `${keyboardHeight}px`;
-                
-                setTimeout(() => {
-                    const chat = document.getElementById("chat-messages");
-                    if (chat) chat.scrollTop = chat.scrollHeight;
-                }, 100);
-            } else {
-                appContainer.style.bottom = '1rem'; 
-            }
         }
     });
 }

@@ -2,7 +2,6 @@
 /* 1. CSS VARIABLES & THEME (WEB & NATIVE)   */
 /* ========================================= */
 :root {
-  /* --- COLORI BASE --- */
   --bg-body: #000000;
   --bg-app: #000000;
   --bg-panel: #141414;
@@ -21,13 +20,11 @@
   --bord-rads: 12px;
   --transition-bg: rgba(7, 7, 7, 0.973);
 
-  /* --- SPECIFICI WEB (Default) --- */
   --border-color: #262626; 
   --room-item: var(--bg-panel);
   --avatar-item: var(--bubble-peer);
   --main-font: 'Inter', sans-serif;
 
-  /* Sizing Web */
   --fs-h1: 2.4rem;
   --fs-p: 1.1525rem;
   --fs-input: 1.28rem;
@@ -48,13 +45,12 @@
 }
 
 body.is-native {
-  /* --- SPECIFICI NATIVE APP (Sovrascrivono il Web) --- */
+
   --border-color: #000000; 
   --room-item: #1e1e1e;
   --avatar-item: #363636;
   --main-font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
-  /* Sizing Nativo */
   --fs-h1: 2rem;
   --fs-p: 1rem;
   --fs-input: 1.1rem;
@@ -74,7 +70,7 @@ body.is-native {
   --fs-panel-text: 1rem;
 }
 
-/* --- THEMES (Validi per entrambi) --- */
+
 body.light-theme {
   --bg-body: #f0f2f5;
   --bg-app: #ffffff;
@@ -101,7 +97,7 @@ body.pink-theme {
   --primary-hover: #e61996;    
   --bubble-me: #ff2aad;      
   --room-item: #ffdeea;
-  --avatar-item: #ff2aad;
+  --avatar-item: #ff72c9;
   --bubble-peer: #ffffff;   
   --border-color: #ffc4d9;    
   --transition-bg: rgba(255, 245, 249, 0.98); 
@@ -122,10 +118,6 @@ body.pink-theme {
 
 html, body {
   width: 100%;
-  height: 100%;
-  position: fixed;
-  top: 0;
-  left: 0;
   overflow: hidden;
   background-color: var(--bg-app);
 }
@@ -139,9 +131,14 @@ body {
 
 body.is-web {
   height: 100dvh;
+  position: relative;
 }
 
 body.is-native {
+  height: 100%;
+  position: fixed; 
+  top: 0;
+  left: 0;
   overscroll-behavior-y: none;
   touch-action: none;
   padding-top: max(env(safe-area-inset-top, 0px), 35px);
@@ -196,7 +193,9 @@ body.is-native #app-container {
 
 .screen.active {
   display: flex;
+  flex: 1;
 }
+
 
 /* ========================================= */
 /* 4. LOGIN SCREEN                           */
