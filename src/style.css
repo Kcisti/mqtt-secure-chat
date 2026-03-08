@@ -1,7 +1,8 @@
 /* ========================================= */
-/* 1. CSS VARIABLES & THEME                  */
+/* 1. CSS VARIABLES & THEME (WEB & NATIVE)   */
 /* ========================================= */
 :root {
+  /* --- COLORI BASE --- */
   --bg-body: #000000;
   --bg-app: #000000;
   --bg-panel: #141414;
@@ -12,56 +13,98 @@
 
   --primary: #301981;    
   --primary-hover: #4226ad;
-  
   --danger: #ed4956;  
   --success: #00c853;
 
   --bubble-me: #301981; 
   --bubble-peer: #262626; 
-
-  --border-color: #262626; 
-
   --bord-rads: 12px;
-
   --transition-bg: rgba(7, 7, 7, 0.973);
+
+  /* --- SPECIFICI WEB (Default) --- */
+  --border-color: #262626; 
+  --room-item: var(--bg-panel);
+  --avatar-item: var(--bubble-peer);
+  --main-font: 'Inter', sans-serif;
+
+  /* Sizing Web */
+  --fs-h1: 2.4rem;
+  --fs-p: 1.1525rem;
+  --fs-input: 1.28rem;
+  --fs-btn: 1.2rem;
+  --fs-status: 0.9rem;
+  --fs-room-title: 1.68rem;
+  --fs-icon-btn: 1.68rem;
+  --fs-add-btn: 2.58rem;
+  --fs-room-name: 1.3rem;
+  --fs-last-msg: 1rem;
+  --fs-action-head: 1.15rem;
+  --fs-action-item: 1.15rem;
+  --fs-menu-header: 1.28rem;
+  --fs-menu-item: 1.25rem;
+  --fs-chat-h3: 1.5rem;
+  --fs-bubble: 1.28rem;
+  --fs-panel-text: 1.1rem;
 }
 
+body.is-native {
+  /* --- SPECIFICI NATIVE APP (Sovrascrivono il Web) --- */
+  --border-color: #000000; 
+  --room-item: #1e1e1e;
+  --avatar-item: #363636;
+  --main-font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /* Sizing Nativo */
+  --fs-h1: 2rem;
+  --fs-p: 1rem;
+  --fs-input: 1.1rem;
+  --fs-btn: 1.1rem;
+  --fs-status: 0.8rem;
+  --fs-room-title: 1.4rem;
+  --fs-icon-btn: 1.6rem;
+  --fs-add-btn: 2.6rem;
+  --fs-room-name: 1.17rem;
+  --fs-last-msg: 0.9rem;
+  --fs-action-head: 0.95rem;
+  --fs-action-item: 0.95rem;
+  --fs-menu-header: 1.14rem;
+  --fs-menu-item: 1.1rem;
+  --fs-chat-h3: 1.4rem;
+  --fs-bubble: 1.058rem;
+  --fs-panel-text: 1rem;
+}
+
+/* --- THEMES (Validi per entrambi) --- */
 body.light-theme {
   --bg-body: #f0f2f5;
   --bg-app: #ffffff;
   --bg-panel: #f4f4f4; 
   --bg-panel-hover: #eaeaec; 
-  
   --text-main: #111827;
   --text-muted: #6b7280;
-
   --bubble-peer: #e2e2e6; 
-  
+  --room-item: #f4f4f4;
+  --avatar-item: #ceced1;
   --border-color: #e5e7eb;
   --transition-bg: rgba(255, 255, 255, 0.96); 
 }
-body.light-theme .room-avatar {
-  background-color: #ceced1;
-}
+body.light-theme .room-avatar { background-color: #ceced1; }
 
 body.pink-theme {
   --bg-body: #ffe8f0;        
   --bg-app: #fff5f9;         
   --bg-panel: #ffdeea;       
   --bg-panel-hover: #ffd1e1; 
-  
   --text-main: #523040; 
   --text-muted: #b8829a;
-
   --primary: #ff2aad;          
   --primary-hover: #e61996;    
-  --bubble-me: #ff2aad;        
-
+  --bubble-me: #ff2aad;      
+  --room-item: #ffdeea;
+  --avatar-item: #ff2aad;
   --bubble-peer: #ffffff;   
-  
   --border-color: #ffc4d9;    
   --transition-bg: rgba(255, 245, 249, 0.98); 
-
 }
 
 /* ========================================= */
@@ -71,20 +114,20 @@ body.pink-theme {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--main-font);
   -webkit-tap-highlight-color: transparent; 
   outline: none;
   user-select: none;
 }
 
 html, body {
+  width: 100%;
+  height: 100%;
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%; 
-  height: 100dvh;
   overflow: hidden;
+  background-color: var(--bg-app);
 }
 
 body {
@@ -94,12 +137,36 @@ body {
   flex-direction: column; 
 }
 
+body.is-web {
+  height: 100dvh;
+}
+
+body.is-native {
+  overscroll-behavior-y: none;
+  touch-action: none;
+  padding-top: max(env(safe-area-inset-top, 0px), 35px);
+  padding-bottom: 0px;
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
 #app-container {
-  width: 100%;
-  height: 100%; 
   display: flex;
   flex-direction: column;
   background-color: var(--bg-app);
+}
+
+body.is-web #app-container {
+  width: 100%;
+  height: 100%; 
+}
+
+body.is-native #app-container {
+  position: absolute;
+  top: 1.8rem;
+  bottom: 1rem;
+  left: 0;
+  right: 0;
 }
 
 @media (min-width: 640px) {
@@ -114,6 +181,7 @@ body {
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     overflow: hidden;
+    position: relative; /* Override per PC */
   }
 }
 
@@ -146,14 +214,14 @@ body {
 }
 
 .login-card h1 {
-  font-size: 2.4rem;
+  font-size: var(--fs-h1);
   margin-bottom: 0.5rem;
 }
 
 .login-card p {
   color: var(--text-muted);
   margin-bottom: 2rem;
-  font-size: 1.1525rem;
+  font-size: var(--fs-p);
 }
 
 .input-group {
@@ -171,7 +239,7 @@ input {
   border: none;
   background-color: var(--bubble-peer);
   color: var(--text-main);
-  font-size: 1.2rem;
+  font-size: var(--fs-input);
   outline: none;
   transition: border 0.2s;
   height: 50px;
@@ -193,7 +261,7 @@ button {
   border: none;
   padding: 12px 20px;
   border-radius: var(--bord-rads);
-  font-size: 1.2rem;
+  font-size: var(--fs-btn);
   font-weight: 500;
   cursor: pointer;
   transition: 0.2s;
@@ -201,7 +269,7 @@ button {
 }
 
 #status-text {
-  font-size: 0.9rem;
+  font-size: var(--fs-status);
   color: var(--text-muted);
   min-height: 20px;
 }
@@ -219,7 +287,8 @@ button {
 }
 
 .room-list-title {
-  font-size: 1.68rem;
+  font-size: var(--fs-room-title);
+  transform: translateY(1px);
   font-weight: 600;
   color: var(--text-main);
   margin: 0;
@@ -230,7 +299,7 @@ button {
   flex: 0 ;
   color: var(--text-main);
   border: none;
-  font-size: 1.68rem;
+  font-size: var(--fs-icon-btn);
   font-weight: 400;
   cursor: pointer;
   transition: transform 0.2s, color 0.2s;
@@ -242,20 +311,15 @@ button {
   height: 45px;
 }
 
-.action-item.cancel {
-  text-align: center;
-  font-weight: 500;
-  border-top: 1px solid #3a3a42;
-  border-bottom: none;
-}
-
 .icon-btn-add {
   background-color: var(--primary);
   flex: 0 ;
-  position: fixed;bottom:5rem;right: 3rem;
+  position: fixed;
+  bottom: 5rem;
+  right: 3rem;
   color: #ffffff;
   border: none;
-  font-size: 2.58rem;
+  font-size: var(--fs-add-btn);
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.2s, color 0.2s;
@@ -274,14 +338,15 @@ button {
 .room-list-body {
   overflow-y: auto;
   height: calc(100vh - 70px); 
-  padding: 0.8rem 1rem;
+  /* Ho inserito 7rem sotto per fargli superare il bottone! */
+  padding: 0.8rem 1rem 7rem 1rem;
 }
 
 .room-item {
   display: flex;
   align-items: center;
   padding: 12px;
-  background-color: var(--bg-panel);
+  background-color: var(--room-item);
   border-radius: 12px;
   margin-bottom: 10px;
   cursor: pointer;
@@ -297,7 +362,7 @@ button {
   width: 55px;
   height: 55px;
   border-radius: var(--bord-rads);
-  background-color: var(--bubble-peer);
+  background-color:  var(--avatar-item);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -314,14 +379,14 @@ button {
 }
 
 .room-name {
-  font-size: 1.3rem;
+  font-size: var(--fs-room-name);
   font-weight: 500;
   color: var(--text-main);
   margin-bottom: 4px;
 }
 
 .room-last-msg {
-  font-size: 1rem;
+  font-size: var(--fs-last-msg);
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -330,7 +395,7 @@ button {
 }
 
 .action-menu {
-  background-color:  var(--bg-panel);  
+  background-color: var(--bg-panel);  
   border-radius: var(--bord-rads);
   width: 45%; 
   overflow: hidden;
@@ -339,11 +404,7 @@ button {
   transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-
-#room-options-overlay {
-  display: block; 
-}
-
+#room-options-overlay { display: block; }
 
 #room-options-overlay .action-menu {
   position: absolute; 
@@ -361,7 +422,7 @@ button {
 
 .action-menu-header {
   padding: 0.7rem 1rem;
-  font-size: 1.15rem;
+  font-size: var(--fs-action-head);
   color: var(--text-muted);
   border-bottom: 1px solid var(--border-color); 
   font-weight: 500;
@@ -376,7 +437,7 @@ button {
   width: 100%;
   padding: 0.7rem 1rem;
   text-align: left;
-  font-size: 1.15rem;
+  font-size: var(--fs-action-item);
   border-radius: 0;
   color: var(--text-main);
   height: 45px;
@@ -386,9 +447,7 @@ button {
   border-bottom: 1px solid var(--border-color);
 }
 
-.action-item:active {
-  background-color: var(--bg-panel-hover); 
-}
+.action-item:active { background-color: var(--bg-panel-hover); }
 
 .action-item.cancel {
   text-align: center;
@@ -397,11 +456,7 @@ button {
   border-bottom: none;
 }
 
-.action-item.danger {
-  color: var(--danger);
-  border: 0;
-}
-
+.action-item.danger { color: var(--danger); border: 0; }
 
 /* ========================================= */
 /* GLOBAL OPTIONS MENU (Bottom Sheet)        */
@@ -411,10 +466,11 @@ button {
   align-items: flex-start;
   padding: 2.5rem 1.5rem;
 }
-
-#global-action-menu{
-  width: 100%;
+body.is-native #global-options-overlay {
+  padding: 2.9rem 1.5rem;
 }
+
+#global-action-menu{ width: 100%; }
 
 #global-options-overlay .action-menu {
   transform: translateY(-100%);
@@ -426,24 +482,24 @@ button {
   transform: translateY(0); 
 }
 
-#global-menu-header,#btn-global-wipe,
-#btn-global-theme{
+#global-menu-header, #btn-global-wipe, #btn-global-theme {
   height: 52px;
-  font-size: 1.25rem;
+  font-size: var(--fs-menu-item);
   display: flex;
   align-items: center;
   color: var(--text-muted);
 }
+body.is-native #global-menu-header,
+body.is-native #btn-global-wipe,
+body.is-native #btn-global-theme {
+  height: 50px;
+}
 
-#global-menu-header{
-  font-size: 1.28rem;
+#global-menu-header {
+  font-size: var(--fs-menu-header);
   color: var(--text-main);
 }
-
-#btn-global-wipe{
-  color: var(--danger);
-}
-
+#btn-global-wipe { color: var(--danger); }
 
 /* ========================================= */
 /* 6. NEW ROOM OVERLAY (GLASSMORPHISM)       */
@@ -462,6 +518,7 @@ button {
   pointer-events: none;
   transition: opacity 0.5s ease;
 }
+body.is-native .new-room-overlay { position: absolute; }
 
 .new-room-overlay.active {
   opacity: 1;
@@ -478,15 +535,10 @@ button {
   transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.new-room-overlay.active .new-room-modal {
-  transform: translateY(0); 
-}
+.new-room-overlay.active .new-room-modal { transform: translateY(0); }
 
 @media (min-width: 640px) {
-  .new-room-overlay {
-    align-items: center; 
-  }
-
+  .new-room-overlay { align-items: center; }
   .new-room-modal {
     width: 75%;
     max-width: 400px; 
@@ -538,10 +590,11 @@ button {
   justify-content: space-between;
   align-items: center;
   user-select: none;
+  flex-shrink: 0;
 }
 
 .chat-header h3 { 
-  font-size: 1.5rem; 
+  font-size: var(--fs-chat-h3); 
   font-weight: 600; 
 }
 
@@ -552,9 +605,7 @@ button {
   transition: transform 0.2s;
 }
 
-.header-lock:active {
-  transform: translateY(4px) scale(0.9); 
-}
+.header-lock:active { transform: translateY(4px) scale(0.9); }
 
 .privacy-mode .msg-bubble {
   filter: blur(6px);
@@ -576,11 +627,10 @@ button {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  touch-action: pan-y;
 }
 
-#chat-messages::-webkit-scrollbar {
-  width: 0px; 
-}
+#chat-messages::-webkit-scrollbar { width: 0px; }
 
 .msg-wrapper {
   display: flex;
@@ -588,19 +638,14 @@ button {
   animation: slideInUp 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
-.msg-wrapper.me { 
-  justify-content: flex-end; 
-}
-
-.msg-wrapper.peer { 
-  justify-content: flex-start; 
-}
+.msg-wrapper.me { justify-content: flex-end; }
+.msg-wrapper.peer { justify-content: flex-start; }
 
 .msg-bubble {
   max-width: 75%;
   padding: 10px 14px;
   border-radius: 12px;
-  font-size: 1.28rem;
+  font-size: var(--fs-bubble);
   line-height: 1.4;
   word-wrap: break-word;
   box-shadow: 0 1px 2px rgba(0,0,0,0.1);
@@ -627,6 +672,7 @@ button {
   display: flex;
   gap: 10px;
   align-items: center; 
+  flex-shrink: 0;
 }
 
 .input-container {
@@ -646,7 +692,7 @@ button {
   min-width: 0;
   background-color: var(--bubble-peer);
   color: var(--text-main);
-  font-size: 1.28rem;
+  font-size: var(--fs-input);
   outline: none;
   transition: border 0.2s;
 }
@@ -689,9 +735,7 @@ button {
   color: #ffffff;
 }
 
-#attach-btn:active, #send-btn:active {
-  transform: scale(0.9); 
-}
+#attach-btn:active, #send-btn:active { transform: scale(0.9); }
 
 .bomb-icon {
   display: inline-block;
@@ -746,7 +790,7 @@ button {
 }
 
 .panel-bomb-text {
-  font-size: 1.1rem;
+  font-size: var(--fs-panel-text);
   font-weight: 500;
   color: var(--text-muted);
 }
@@ -757,9 +801,7 @@ button {
   transition: color 0.2s ease, transform 0.2s ease;
 }
 
-.panel-bomb-toggle:active .panel-bomb-icon {
-  transform: scale(0.85);
-}
+.panel-bomb-toggle:active .panel-bomb-icon { transform: scale(0.85); }
 
 .attach-item {
   flex: 1;
@@ -772,9 +814,7 @@ button {
   transition: color 0.2s;
 }
 
-.attach-item:hover {
-  color: var(--text-main);
-}
+.attach-item:hover { color: var(--text-main); }
 
 .attach-item .icon-circle {
   width: 65px;
@@ -789,9 +829,7 @@ button {
   transition: transform 0.2s, background-color 0.2s;
 }
 
-.attach-item:active {
-  transform: scale(0.9); 
-}
+.attach-item:active { transform: scale(0.9); }
 
 .file-attachment {
   display: flex;
@@ -801,9 +839,7 @@ button {
   padding: 4px;
 }
 
-.file-attachment ion-icon {
-  font-size: 1.8rem;
-}
+.file-attachment ion-icon { font-size: 1.8rem; }
 
 .file-attachment span {
   font-size: 1.1rem;
@@ -811,9 +847,7 @@ button {
   word-break: break-all;
 }
 
-.file-attachment:active {
-  opacity: 0.7;
-}
+.file-attachment:active { opacity: 0.7; }
 
 #viewer-filename {
   flex: 1;
@@ -882,25 +916,18 @@ button {
   40%, 80% { transform: translateX(6px); }
 }
 
-.shake-error {
-  animation: shakeX 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-}
+.shake-error { animation: shakeX 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
 
 @keyframes cameraFocus {
   0% { filter: blur(15px); opacity: 0; }
   100% { filter: blur(0px); opacity: 1; }
 }
 
-.chat-focus-in {
-  animation: cameraFocus 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
-}
+.chat-focus-in { animation: cameraFocus 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; }
 
 .transition-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 0; left: 0; width: 100%; height: 100%;
   background-color: var(--bg-body);
   z-index: 9999;
   display: flex;
@@ -911,10 +938,7 @@ button {
   transition: opacity 0.8s ease;
 }
 
-.transition-overlay.active {
-  opacity: 1;
-  pointer-events: all;
-}
+.transition-overlay.active { opacity: 1; pointer-events: all; }
 
 .transition-padlock {
   font-size: 8.5rem;
@@ -929,29 +953,15 @@ button {
 }
 
 @keyframes padlockGlow {
-  0% { 
-    opacity: 0; 
-    transform: scale(0.5); 
-    filter: drop-shadow(0 0 0px transparent);
-  }
-  50% { 
-    opacity: 1; 
-    transform: scale(1.1); 
-    filter: drop-shadow(0 0 15px rgba(168, 168, 168, 0.4));
-  }
-  100% { 
-    opacity: 1; 
-    transform: scale(1); 
-    filter: drop-shadow(0 0 8px rgba(168, 168, 168, 0.8));
-  }
+  0% { opacity: 0; transform: scale(0.5); filter: drop-shadow(0 0 0px transparent); }
+  50% { opacity: 1; transform: scale(1.1); filter: drop-shadow(0 0 15px rgba(168, 168, 168, 0.4)); }
+  100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 8px rgba(168, 168, 168, 0.8)); }
 }
 
 .dark-transition-expander {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  width: 150vmax; 
-  height: 150vmax;
+  top: 50%; left: 50%;
+  width: 150vmax; height: 150vmax;
   background-color: var(--transition-bg);
   border-radius: 50%; 
   transform: translate(-50%, -50%) scale(0);
@@ -960,10 +970,5 @@ button {
   transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease;
 }
 
-.dark-transition-expander.expand {
-  transform: translate(-50%, -50%) scale(1); 
-}
-
-.dark-transition-expander.fade-out {
-  opacity: 0; 
-}
+.dark-transition-expander.expand { transform: translate(-50%, -50%) scale(1); }
+.dark-transition-expander.fade-out { opacity: 0; }

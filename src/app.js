@@ -41,7 +41,7 @@ function queueOrSend(message, requiresPush = false) {
         if (requiresPush && peerPushId) {
             const now = Date.now();
 
-            if (now - lastPushSentTime > 10000000) {
+            if (now - lastPushSentTime > 10000) {
                 sendPushNotification(peerPushId, "New Secure Message");
                 lastPushSentTime = now;
             }
@@ -216,8 +216,23 @@ function showRoomOptions(pin, roomElement) {
     
     const rect = roomElement.getBoundingClientRect();
     const actionMenu = document.querySelector('#room-options-overlay .action-menu');
+    actionMenu.style.visibility = 'hidden';
+    actionMenu.style.display = 'block'; 
     
-    actionMenu.style.top = (rect.bottom + 8) + 'px';
+    const menuHeight = actionMenu.offsetHeight || 150; 
+    
+    actionMenu.style.visibility = '';
+    actionMenu.style.display = '';
+    
+    const spaceBelow = window.innerHeight - rect.top;
+
+    if (spaceBelow < (menuHeight + 60)) {
+        actionMenu.style.top = (rect.bottom - menuHeight - 100) + 'px';
+        actionMenu.style.transformOrigin = "bottom right"; 
+    } else {
+        actionMenu.style.top = (rect.top + 43) + 'px';
+        actionMenu.style.transformOrigin = "top right";
+    }
     
     actionMenu.style.right = (window.innerWidth - rect.right) + 'px';
     
@@ -760,7 +775,8 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 function handleGallery(e) {
-  if (e) { e.preventDefault(); animateButton(e.currentTarget); }
+  if (e && e.type !== 'click') { e.preventDefault(); }
+  if (e) animateButton(e.currentTarget);
   closeAttachmentPanel();
   
   if (isIOS) {
@@ -770,19 +786,62 @@ function handleGallery(e) {
   }
 }
 
-function handleCamera(e) {
-  if (e) { e.preventDefault(); animateButton(e.currentTarget); }
+async function handleCamera(e) {
+ if (e && e.type !== 'click') { e.preventDefault(); }
+  animateButton(e.currentTarget);
   closeAttachmentPanel();
   
-  if (isIOS) {
-      document.getElementById('image_input_camera').click();
-  } else {
-      setTimeout(() => { document.getElementById('image_input_camera').click(); }, 150);
+  if (window.Capacitor && window.Capacitor.Plugins.Camera) {
+      try {
+          const image = await window.Capacitor.Plugins.Camera.getPhoto({
+              quality: 60, 
+              allowEditing: false,
+              resultType: 'dataUrl',
+              source: 'CAMERA',      
+              width: 800 
+          });
+
+          const base64Img = image.dataUrl;
+          const originalFileName = 'secure_camera.jpg';
+
+          const attachIcon = document.querySelector('#attach-btn ion-icon');
+          const panelIcon = document.querySelector('#panel-bomb-icon');
+          const isBombActive = (attachIcon && attachIcon.getAttribute('name') === 'radio-button-on') || 
+                               (panelIcon && panelIcon.getAttribute('name') === 'radio-button-on');
+
+          const msgId = Date.now() + '-img-' + Math.random().toString(36).substr(2, 9);
+          const msgObj = { id: msgId, sender: 'me', text: base64Img, time: Date.now(), isBomb: isBombActive, msgType: 'image', fileName: originalFileName };
+          
+          localChatHistory.push(msgObj);
+          saveHistory();
+          addMessageToUI(base64Img, 'me', isBombActive, 'image', originalFileName);
+
+          const payloadObj = { type: 'IMG', text: base64Img, id: msgId, senderId: MY_CLIENT_ID, isBomb: isBombActive, fileName: originalFileName };
+          const encrypted = await encryptData(payloadObj, cryptoKey);
+          const message = new Paho.MQTT.Message(encrypted);
+          message.destinationName = `blackchat/room/${currentTopic}`;
+          message.qos = 1; message.retained = true; 
+          queueOrSend(message, true);
+
+          if (isBombActive) startAutodestructTimer(msgId);
+          resetInputState();
+
+      } catch (error) {
+          console.log("Camera Error", error);
+      }
+  } 
+  else {
+      if (isIOS) {
+          document.getElementById('image_input_camera').click();
+      } else {
+          setTimeout(() => { document.getElementById('image_input_camera').click(); }, 150);
+      }
   }
 }
 
 function handleDocument(e) {
-  if (e) { e.preventDefault(); animateButton(e.currentTarget); }
+  if (e && e.type !== 'click') { e.preventDefault(); }
+  if (e) animateButton(e.currentTarget);
   closeAttachmentPanel();
   
   if (isIOS) {
@@ -794,7 +853,8 @@ function handleDocument(e) {
 
 
 async function handleLocation(e) {
-    if (e) { e.preventDefault(); animateButton(e.currentTarget); }
+    if (e && e.type !== 'click') { e.preventDefault(); }
+    if (e) animateButton(e.currentTarget);
     closeAttachmentPanel();
 
     const attachIcon = document.querySelector('#attach-btn ion-icon');
@@ -1048,40 +1108,6 @@ const btnCamera = document.getElementById('btn-camera');
 const btnLocation = document.getElementById('btn-location');
 const btnDocument = document.getElementById('btn-document');
 
-if (sendBtn) {
-    sendBtn.addEventListener('mousedown', handleSend);
-    sendBtn.addEventListener('touchstart', handleSend, { passive: false });
-}
-
-if (attachBtn) {
-    attachBtn.addEventListener('mousedown', handleAttach);
-    attachBtn.addEventListener('touchstart', handleAttach, { passive: false });
-}
-
-if (btnPanelBomb) {
-    btnPanelBomb.addEventListener('mousedown', handlePanelBomb);
-    btnPanelBomb.addEventListener('touchstart', handlePanelBomb, { passive: false });
-}
-
-if (btnGallery) {
-    btnGallery.addEventListener('mousedown', handleGallery);
-    btnGallery.addEventListener('touchstart', handleGallery, { passive: false });
-}
-
-if (btnCamera) {
-    btnCamera.addEventListener('mousedown', handleCamera);
-    btnCamera.addEventListener('touchstart', handleCamera, { passive: false });
-}
-
-if (btnLocation) {
-    btnLocation.addEventListener('mousedown', handleLocation);
-    btnLocation.addEventListener('touchstart', handleLocation, { passive: false });
-}
-
-if (btnDocument) {
-    btnDocument.addEventListener('mousedown', handleDocument);
-    btnDocument.addEventListener('touchstart', handleDocument, { passive: false });
-}
 
 const imgGalleryInput = document.getElementById('image_input_gallery');
 const imgCameraInput = document.getElementById('image_input_camera');
@@ -1264,3 +1290,22 @@ if (window.Capacitor && window.Capacitor.Plugins.Keyboard) {
         }
     });
 }
+
+
+function bindSmartButton(btn, handler) {
+    if (!btn) return;
+    if (isIOS) {
+        btn.addEventListener('click', handler);
+    } else {
+        btn.addEventListener('mousedown', handler);
+        btn.addEventListener('touchstart', handler, { passive: false });
+    }
+}
+
+bindSmartButton(sendBtn, handleSend);
+bindSmartButton(attachBtn, handleAttach);
+bindSmartButton(btnPanelBomb, handlePanelBomb);
+bindSmartButton(btnGallery, handleGallery);
+bindSmartButton(btnCamera, handleCamera);
+bindSmartButton(btnLocation, handleLocation);
+bindSmartButton(btnDocument, handleDocument);
