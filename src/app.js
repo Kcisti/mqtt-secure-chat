@@ -755,61 +755,104 @@ function closeAttachmentPanel() {
   if (panel) panel.classList.remove('open');
 }
 
+
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
 function handleGallery(e) {
   if (e) { e.preventDefault(); animateButton(e.currentTarget); }
-  setTimeout(() => { closeAttachmentPanel(); document.getElementById('image_input_gallery').click(); }, 150);
+  closeAttachmentPanel();
+  
+  if (isIOS) {
+      document.getElementById('image_input_gallery').click();
+  } else {
+      setTimeout(() => { document.getElementById('image_input_gallery').click(); }, 150);
+  }
 }
 
 function handleCamera(e) {
   if (e) { e.preventDefault(); animateButton(e.currentTarget); }
-  setTimeout(() => { closeAttachmentPanel(); document.getElementById('image_input_camera').click(); }, 150);
+  closeAttachmentPanel();
+  
+  if (isIOS) {
+      document.getElementById('image_input_camera').click();
+  } else {
+      setTimeout(() => { document.getElementById('image_input_camera').click(); }, 150);
+  }
 }
 
 function handleDocument(e) {
   if (e) { e.preventDefault(); animateButton(e.currentTarget); }
-  setTimeout(() => { closeAttachmentPanel(); document.getElementById('doc_input').click(); }, 150);
+  closeAttachmentPanel();
+  
+  if (isIOS) {
+      document.getElementById('doc_input').click();
+  } else {
+      setTimeout(() => { document.getElementById('doc_input').click(); }, 150);
+  }
 }
 
-function handleLocation(e) {
-  if (e) { e.preventDefault(); animateButton(e.currentTarget); }
-  closeAttachmentPanel();
 
-  if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser.");
-      return;
-  }
+async function handleLocation(e) {
+    if (e) { e.preventDefault(); animateButton(e.currentTarget); }
+    closeAttachmentPanel();
 
-  const attachIcon = document.querySelector('#attach-btn ion-icon');
-  const panelIcon = document.querySelector('#panel-bomb-icon');
-  const isBombActive = (attachIcon && attachIcon.getAttribute('name') === 'radio-button-on') || 
-                       (panelIcon && panelIcon.getAttribute('name') === 'radio-button-on');
+    const attachIcon = document.querySelector('#attach-btn ion-icon');
+    const panelIcon = document.querySelector('#panel-bomb-icon');
+    const isBombActive = (attachIcon && attachIcon.getAttribute('name') === 'radio-button-on') || 
+                         (panelIcon && panelIcon.getAttribute('name') === 'radio-button-on');
 
-  navigator.geolocation.getCurrentPosition(async (position) => {
-      const lat = position.coords.latitude;
-      const lon = position.coords.longitude;
-      
-      const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
-      const fileName = "location.gps";
-      const msgId = Date.now() + '-loc-' + Math.random().toString(36).substr(2, 9);
+    const inviaPosizione = async (lat, lon) => {
 
-      const msgObj = { id: msgId, sender: 'me', text: mapsUrl, time: Date.now(), isBomb: isBombActive, msgType: 'location', fileName: fileName };
-      localChatHistory.push(msgObj);
-      saveHistory();
-      addMessageToUI(mapsUrl, 'me', isBombActive, 'location', fileName);
+        const mapsUrl = `https://maps.google.com/?q=${lat},${lon}`;
+        const fileName = "location.gps";
+        const msgId = Date.now() + '-loc-' + Math.random().toString(36).substr(2, 9);
 
-      const payloadObj = { type: 'LOC', text: mapsUrl, id: msgId, senderId: MY_CLIENT_ID, isBomb: isBombActive, fileName: fileName };
-      const encrypted = await encryptData(payloadObj, cryptoKey);
-      const message = new Paho.MQTT.Message(encrypted);
-      message.destinationName = `blackchat/room/${currentTopic}`;
-      message.qos = 1; message.retained = true; 
-      queueOrSend(message, true);
+        const msgObj = { id: msgId, sender: 'me', text: mapsUrl, time: Date.now(), isBomb: isBombActive, msgType: 'location', fileName: fileName };
+        localChatHistory.push(msgObj);
+        saveHistory();
+        addMessageToUI(mapsUrl, 'me', isBombActive, 'location', fileName);
 
-      if (isBombActive) startAutodestructTimer(msgId);
-      resetInputState();
+        const payloadObj = { type: 'LOC', text: mapsUrl, id: msgId, senderId: MY_CLIENT_ID, isBomb: isBombActive, fileName: fileName };
+        const encrypted = await encryptData(payloadObj, cryptoKey);
+        const message = new Paho.MQTT.Message(encrypted);
+        message.destinationName = `blackchat/room/${currentTopic}`;
+        message.qos = 1; message.retained = true; 
+        queueOrSend(message, true);
 
-  }, (error) => {
-      alert("Access Denied");
-  });
+        if (isBombActive) startAutodestructTimer(msgId);
+        resetInputState();
+    };
+
+    try {
+
+        if (window.Capacitor && window.Capacitor.Plugins.Geolocation) {
+            const Geo = window.Capacitor.Plugins.Geolocation;
+            
+
+            const checkPerms = await Geo.checkPermissions();
+            if (checkPerms.location !== 'granted') {
+                const reqPerms = await Geo.requestPermissions();
+                if (reqPerms.location !== 'granted') {
+                    alert("Permessi GPS negati.");
+                    return;
+                }
+            }
+
+            const position = await Geo.getCurrentPosition();
+            inviaPosizione(position.coords.latitude, position.coords.longitude);
+        } 
+
+        else {
+            if (!navigator.geolocation) { alert("GPS not supported"); return; }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => inviaPosizione(pos.coords.latitude, pos.coords.longitude),
+                (err) => alert("Access Denied.")
+            );
+        }
+    } catch (err) {
+        alert("Error GPS: Permissions Denied");
+    }
 }
 
 function enterRoomWithRipple(pin, event) {
@@ -1178,14 +1221,14 @@ if (btnGlobalTheme) {
 
 
 if (window.Capacitor && window.Capacitor.Plugins.Keyboard) {
+
     const Keyboard = window.Capacitor.Plugins.Keyboard;
 
     Keyboard.addListener('keyboardWillShow', (info) => {
         const appContainer = document.getElementById('app-container');
         if (appContainer) {
             const offsetAndroid = 57; 
-            
-            appContainer.style.bottom = `calc(${info.keyboardHeight}px - ${offsetAndroid}px)`
+            appContainer.style.bottom = `calc(${info.keyboardHeight}px - ${offsetAndroid}px)`;
             
             setTimeout(() => {
                 const chat = document.getElementById("chat-messages");
@@ -1198,6 +1241,26 @@ if (window.Capacitor && window.Capacitor.Plugins.Keyboard) {
         const appContainer = document.getElementById('app-container');
         if (appContainer) {
             appContainer.style.bottom = '1rem'; 
+        }
+    });
+} else if (window.visualViewport) {
+    
+    window.visualViewport.addEventListener('resize', () => {
+        const appContainer = document.getElementById('app-container');
+        if (appContainer) {
+            const keyboardHeight = window.innerHeight - window.visualViewport.height;
+            
+            if (keyboardHeight > 100) {
+
+                appContainer.style.bottom = `${keyboardHeight}px`;
+                
+                setTimeout(() => {
+                    const chat = document.getElementById("chat-messages");
+                    if (chat) chat.scrollTop = chat.scrollHeight;
+                }, 100);
+            } else {
+                appContainer.style.bottom = '1rem'; 
+            }
         }
     });
 }
