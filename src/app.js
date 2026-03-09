@@ -1148,7 +1148,48 @@ const btnDocument = document.getElementById('btn-document');
 const imgGalleryInput = document.getElementById('image_input_gallery');
 const imgCameraInput = document.getElementById('image_input_camera');
 const closeViewerBtn = document.getElementById('close-viewer-btn');
-const docInput = document.getElementById('doc_input');
+const docInput = document.getElementById('doc_input')
+const downloadViewerBtn = document.getElementById('download-viewer-btn');
+
+if (downloadViewerBtn) {
+    downloadViewerBtn.addEventListener('click', async () => {
+        const imgEl = document.getElementById('viewer-image');
+        const nameEl = document.getElementById('viewer-filename');
+        
+        if (!imgEl || !imgEl.src) return;
+
+        const base64Data = imgEl.src;
+        const filename = (nameEl && nameEl.innerText && nameEl.innerText !== "Foto") 
+                         ? nameEl.innerText 
+                         : 'secure_image_' + Date.now() + '.jpg';
+
+        
+        if (isNativeApp && window.Capacitor && window.Capacitor.Plugins.Filesystem) {
+            try {
+                const Filesystem = window.Capacitor.Plugins.Filesystem;
+                
+                const base64String = base64Data.split(',')[1]; 
+                
+                await Filesystem.writeFile({
+                    path: filename,
+                    data: base64String,
+                    directory: 'DOCUMENTS' 
+                });
+            } catch (err) {
+                console.log("Errore salvataggio:", err);
+                alert("Error" + (err.message || JSON.stringify(err))); 
+            }
+        }
+        else {
+            const a = document.createElement('a');
+            a.href = base64Data;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    });
+}
 
 if (imgGalleryInput) imgGalleryInput.addEventListener('change', processAndSendImage);
 if (imgCameraInput) imgCameraInput.addEventListener('change', processAndSendImage);
@@ -1233,6 +1274,33 @@ if (btnGlobalOptions && globalOptionsOverlay) {
     });
 }
 
+// =========================================
+// GESTIONE AUTO-DOWNLOAD
+// =========================================
+let autoDownloadState = localStorage.getItem('bchat_autodownload') === 'true';
+const btnGlobalAutoDownload = document.getElementById('btn-global-autodownload');
+const autoDownloadText = document.getElementById('autodownload-text');
+
+function updateAutoDownloadUI() {
+    if (autoDownloadText) {
+        autoDownloadText.innerText = autoDownloadState ? "Auto Download: Active" : "Auto Download: None";
+    }
+    if (downloadViewerBtn) {
+        downloadViewerBtn.style.display = autoDownloadState ? 'none' : 'flex';
+    }
+}
+
+
+updateAutoDownloadUI();
+
+if (btnGlobalAutoDownload) {
+    btnGlobalAutoDownload.addEventListener('click', () => {
+        autoDownloadState = !autoDownloadState; 
+        localStorage.setItem('bchat_autodownload', autoDownloadState);
+        updateAutoDownloadUI();
+        if (navigator.vibrate) navigator.vibrate(50);
+    });
+}
 
 const btnGlobalWipe = document.getElementById('btn-global-wipe');
 if (btnGlobalWipe) {
