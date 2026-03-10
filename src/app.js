@@ -1618,27 +1618,54 @@ if (window.Capacitor && window.Capacitor.Plugins.Keyboard) {
 }
 
 
+
 if (!isNativeApp && window.visualViewport) {
-    window.visualViewport.addEventListener('resize', () => {
-        const appContainer = document.getElementById('app-container');
+    const appContainer = document.getElementById('app-container');
+    
+    const adjustLayoutForKeyboard = () => {
         if (appContainer) {
+
             appContainer.style.height = `${window.visualViewport.height}px`;
             
-            setTimeout(() => {
-                window.scrollTo(0, 0);
-                const chat = document.getElementById("chat-messages");
-                if (chat) chat.scrollTop = chat.scrollHeight;
-            }, 100);
+            if (window.visualViewport.height < window.innerHeight - 50) {
+                appContainer.style.paddingBottom = '0px';
+            } else {
+                appContainer.style.paddingBottom = 'env(safe-area-inset-bottom, 0px)';
+            }
+        }
+        window.scrollTo(0, 0);
+        document.body.scrollTop = 0;
+    };
+
+    window.visualViewport.addEventListener('resize', adjustLayoutForKeyboard);
+    window.visualViewport.addEventListener('scroll', adjustLayoutForKeyboard);
+
+    document.addEventListener('focusin', (e) => {
+        if (e.target.tagName === 'INPUT') {
+            setTimeout(adjustLayoutForKeyboard, 50);
+            setTimeout(adjustLayoutForKeyboard, 300);
+            
+            if (e.target.id === 'message_input') {
+                setTimeout(() => {
+                    const chat = document.getElementById("chat-messages");
+                    if (chat) chat.scrollTop = chat.scrollHeight;
+                }, 350);
+            }
         }
     });
 
-   
+    document.addEventListener('focusout', () => {
+        setTimeout(adjustLayoutForKeyboard, 100);
+    });
+
     document.addEventListener('touchmove', (e) => {
         if (e.target.closest('#chat-messages') || e.target.closest('.room-list-body')) {
-            return; 
+            return;
         }
-        e.preventDefault(); 
+        e.preventDefault();
     }, { passive: false });
+    
+    adjustLayoutForKeyboard();
 }
 
 
