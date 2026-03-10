@@ -337,7 +337,6 @@ button {
 .room-list-body {
   overflow-y: auto;
   height: calc(100vh - 70px); 
-  /* Ho inserito 7rem sotto per fargli superare il bottone! */
   padding: 0.8rem 1rem 7rem 1rem;
 }
 
@@ -414,9 +413,18 @@ button {
   transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s;
 }
 
-#room-options-overlay.active .action-menu {
+#room-options-overlay.active .action-menu,
+#msg-options-overlay.active .action-menu {
   transform: scale(1);
   opacity: 1;
+}
+
+#msg-options-overlay .action-menu {
+  position: absolute; 
+  transform-origin: top right; 
+  transform: scale(0.9);
+  opacity: 0;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s;
 }
 
 .action-menu-header {
@@ -481,7 +489,7 @@ body.is-native #global-options-overlay {
   transform: translateY(0); 
 }
 
-#global-menu-header, #btn-global-wipe, #btn-global-theme {
+#global-menu-header, #btn-global-wipe, #btn-global-theme, #btn-global-autodownload {
   height: 52px;
   font-size: var(--fs-menu-item);
   display: flex;
@@ -490,7 +498,8 @@ body.is-native #global-options-overlay {
 }
 body.is-native #global-menu-header,
 body.is-native #btn-global-wipe,
-body.is-native #btn-global-theme {
+body.is-native #btn-global-theme,
+#btn-global-autodownload {
   height: 50px;
 }
 
@@ -518,6 +527,10 @@ body.is-native #btn-global-theme {
   transition: opacity 0.5s ease;
 }
 body.is-native .new-room-overlay { position: absolute; }
+
+#overlay-new-pin{
+  border: 1px solid var(--bubble-peer);
+}
 
 .new-room-overlay.active {
   opacity: 1;
@@ -612,8 +625,7 @@ body.is-native .new-room-overlay { position: absolute; }
   user-select: none;
   transition: filter 0.2s ease, opacity 0.2s ease;
 }
-
-.privacy-mode .msg-bubble:active {
+.privacy-mode .msg-bubble.revealed {
   filter: blur(0px);
   opacity: 1;
   transition: filter 0.1s ease;
@@ -683,6 +695,10 @@ body.is-native .new-room-overlay { position: absolute; }
   flex: 1;
   height: 50px;
   overflow: hidden;
+}
+
+body.is-native .input-container {
+  border: 0px;
 }
 
 .chat-input-area input { 
@@ -858,25 +874,36 @@ body.is-native .new-room-overlay { position: absolute; }
   padding-right: 15px; 
 }
 
-#close-viewer-btn {
-  background-color: transparent;
-  padding: 0;
-  width: 40px;
+.viewer-btn-container{
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  border: none;
-  cursor: pointer;
 }
 
-#close-viewer-btn ion-icon {
+.viewer-btn{
+  background-color: transparent;
+  padding: 0;
+  width: 40px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.viewer-btn ion-icon {
   font-size: 1.8rem;
   color: var(--text-main);
 }
 
-#close-viewer-btn:active {
+.viewer-btn:active {
   transform: scale(0.9);
   transform: translateX(0.2rem);
+}
+
+#download-viewer-btn{
+  margin-right: 0.4rem;
+  transform: translateY(-3px);
 }
 
 #viewer-content {

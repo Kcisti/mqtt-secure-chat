@@ -95,6 +95,15 @@ export function addMessageToUI(content, sender, isBomb = false, msgType = 'text'
   
   wrapper.appendChild(bubble);
   chat.appendChild(wrapper);
+
+  if (chat.classList.contains('privacy-mode')) {
+      bubble.classList.add('revealed');
+      bubble.revealTimer = setTimeout(() => {
+          bubble.classList.remove('revealed');
+          delete bubble.revealTimer;
+      }, 5000);
+  }
+
   chat.scrollTop = chat.scrollHeight;
 }
 
@@ -108,19 +117,18 @@ export function rebuildChatUI(historyArray) {
 }
 
 export function openImageViewer(base64Data, fileName) {
-
   document.getElementById('viewer-image').src = base64Data;
   document.getElementById('viewer-filename').innerText = fileName;
   showScreen('viewer-screen');
 
+  const isAutoDownload = localStorage.getItem('bchat_autodownload') === 'true';
 
-  const downloadLink = document.createElement('a');
-  downloadLink.href = base64Data;
-  downloadLink.download = fileName; 
-  
-  document.body.appendChild(downloadLink);
-  downloadLink.click();
-  document.body.removeChild(downloadLink);
+  if (isAutoDownload) {
+      const downloadBtn = document.getElementById('download-viewer-btn');
+      if (downloadBtn) {
+          downloadBtn.click(); 
+      }
+  }
 }
 
 export function closeImageViewer() {

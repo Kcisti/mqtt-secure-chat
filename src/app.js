@@ -13,6 +13,7 @@ let isReconnecting = false;
 let isPrivacyMode = false;
 let savedRooms = JSON.parse(localStorage.getItem('bchat_rooms')) || [];
 let roomNames = JSON.parse(localStorage.getItem('bchat_names')) || {};
+let lockedRooms = JSON.parse(localStorage.getItem('bchat_locked_rooms')) || [];
 let lastPushSentTime = 0; 
 let pressTimer;
 let isLongPress = false;
@@ -44,6 +45,25 @@ let BROKER_PASS = "";
 // --- Helpers ---
 function messageExists(id) {
   return localChatHistory.some(m => m.id === id);
+}
+
+
+async function authenticateUser(reasonText) {
+    if (isNativeApp && window.Capacitor && window.Capacitor.Plugins.NativeBiometric) {
+        try {
+            const NativeBiometric = window.Capacitor.Plugins.NativeBiometric;
+            await NativeBiometric.verifyIdentity({
+                reason: reasonText,
+                title: "App Security",
+                subtitle: "Verify identity to proceed"
+            });
+            return true;
+        } catch (error) {
+            console.log("Biometric Auth Failed", error);
+            return false;
+        }
+    }
+    return false; 
 }
 
 async function fetchMqttCreds() {
@@ -260,7 +280,27 @@ function showRoomOptions(pin, roomElement) {
     }
     
     actionMenu.style.right = (window.innerWidth - rect.right) + 'px';
+
+    actionMenu.style.right = (window.innerWidth - rect.right) + 'px';
     
+    const lockBtn = document.getElementById('btn-lock-room');
+
+    if (lockBtn) {
+        if (!isNativeApp) {
+            lockBtn.style.display = 'none';
+        } else {
+            lockBtn.style.display = ''; 
+            
+            if (lockedRooms.includes(pin)) {
+                lockBtn.innerText = "Unlock Room";
+                
+            } else {
+                lockBtn.innerText = "Lock Room";
+                
+            }
+        }
+    }
+
     roomOptionsOverlay.classList.add('active');
 }
 
@@ -314,6 +354,27 @@ document.getElementById('btn-custom-name')?.addEventListener('click', () => {
     }, 500);
 });
 
+document.getElementById('btn-lock-room')?.addEventListener('click', async () => {
+    roomOptionsOverlay.classList.remove('active');
+    
+    const isLocked = lockedRooms.includes(selectedPinForOptions);
+    const actionText = isLocked ? "Verify identity to Unlock Chat" : "Verify identity to Lock Chat";
+    
+    const isAuthenticated = await authenticateUser(actionText);
+    
+    if (isAuthenticated) {
+        if (isLocked) {
+            lockedRooms = lockedRooms.filter(p => p !== selectedPinForOptions);
+        } else {
+            lockedRooms.push(selectedPinForOptions); 
+        }
+        localStorage.setItem('bchat_locked_rooms', JSON.stringify(lockedRooms));
+        
+        renderRoomList();
+        if (navigator.vibrate) navigator.vibrate(50);
+    }
+});
+
 function renderRoomList() {
     const container = document.getElementById('room-list-container');
     if (!container) return;
@@ -326,15 +387,19 @@ function renderRoomList() {
         
         const roomTitle = roomNames[pin] ? roomNames[pin] : `Room ${displayPin}`;
 
+        const isLocked = lockedRooms.includes(pin);
+        const lockIconHtml = isLocked ? `<ion-icon name="lock-closed" style="color: var(--text-muted); font-size: 0.9rem; margin-left: 6px;"></ion-icon>` : '';
+
         const roomDiv = document.createElement('div');
         roomDiv.className = 'room-item';
         
         roomDiv.oncontextmenu = (e) => { e.preventDefault(); return false; };
 
+
         roomDiv.innerHTML = `
           <div class="room-avatar"><ion-icon name="lock-closed"></ion-icon></div>
           <div class="room-details">
-            <div class="room-name">${roomTitle}</div>
+            <div class="room-name" style="display:flex; align-items:center;">${roomTitle} ${lockIconHtml}</div>
             <div class="room-last-msg">${lastActiveText}</div>
           </div>
         `;
@@ -373,6 +438,20 @@ function renderRoomList() {
 
 async function enterRoom(pin) {
     if (!pin) return;
+
+    if (lockedRooms.includes(pin)) {
+        const isAuthenticated = await authenticateUser("Unlock Secure Room");
+        if (!isAuthenticated) {
+            const addBtn = document.getElementById('add-room-btn');
+            if (addBtn) {
+                addBtn.classList.remove('shake-error-vertical');
+                void addBtn.offsetWidth; 
+                addBtn.classList.add('shake-error-vertical');
+                setTimeout(() => addBtn.classList.remove('shake-error-vertical'), 400);
+            }
+            return; 
+        }
+    }
 
     if (pin.length < 8) {
         const roomListScreen = document.getElementById('room-list-screen');
@@ -593,6 +672,17 @@ async function onMessageArrived(message) {
       rebuildChatUI(localChatHistory);
       disconnect(); 
       return;
+  }
+
+  if (data.type === 'DEL_MSG') {
+      const initialLength = localChatHistory.length;
+      localChatHistory = localChatHistory.filter(m => m.id !== data.id);
+      
+      if (localChatHistory.length !== initialLength) {
+          saveHistory();
+          rebuildChatUI(localChatHistory);
+      }
+      return; 
   }
 
   if ((data.type === 'MSG' || data.type === 'IMG' || data.type === 'LOC' || data.type === 'DOC') && !messageExists(data.id)) {
@@ -1175,8 +1265,10 @@ if (downloadViewerBtn) {
                     data: base64String,
                     directory: 'DOCUMENTS' 
                 });
+
+                alert("Image Saved Successfully ");
             } catch (err) {
-                console.log("Errore salvataggio:", err);
+                console.log("Error", err);
                 alert("Error" + (err.message || JSON.stringify(err))); 
             }
         }
@@ -1274,9 +1366,8 @@ if (btnGlobalOptions && globalOptionsOverlay) {
     });
 }
 
-// =========================================
-// GESTIONE AUTO-DOWNLOAD
-// =========================================
+
+
 let autoDownloadState = localStorage.getItem('bchat_autodownload') === 'true';
 const btnGlobalAutoDownload = document.getElementById('btn-global-autodownload');
 const autoDownloadText = document.getElementById('autodownload-text');
@@ -1326,6 +1417,7 @@ if (btnGlobalWipe) {
     });
 }
 
+
 const savedTheme = localStorage.getItem('bchat_theme');
 if (savedTheme === 'light') {
     document.body.classList.add('light-theme');
@@ -1334,6 +1426,19 @@ if (savedTheme === 'light') {
 }
 
 const btnGlobalTheme = document.getElementById('btn-global-theme');
+
+function updateThemeUI() {
+    if (!btnGlobalTheme) return;
+    
+    if (document.body.classList.contains('light-theme')) {
+        btnGlobalTheme.innerHTML = `Select Theme: White`;
+    } else {
+        btnGlobalTheme.innerHTML = `Select Theme: Black`;
+    }
+}
+
+updateThemeUI();
+
 if (btnGlobalTheme) {
     btnGlobalTheme.addEventListener('click', () => {
         if (document.body.classList.contains('pink-theme')) {
@@ -1344,6 +1449,8 @@ if (btnGlobalTheme) {
             const isLight = document.body.classList.toggle('light-theme');
             localStorage.setItem('bchat_theme', isLight ? 'light' : 'dark');
         }
+        
+        updateThemeUI();
         
         if (navigator.vibrate) navigator.vibrate(50);
     });
@@ -1393,3 +1500,162 @@ bindSmartButton(btnGallery, handleGallery);
 bindSmartButton(btnCamera, handleCamera);
 bindSmartButton(btnLocation, handleLocation);
 bindSmartButton(btnDocument, handleDocument);
+
+const chatContainerNode = document.getElementById('chat-messages');
+const msgOptionsOverlay = document.getElementById('msg-options-overlay');
+
+let msgPressTimer;
+let isMsgLongPress = false;
+let selectedMsgIndex = -1;
+
+function showMsgOptions(wrapperElement) {
+    if (navigator.vibrate) navigator.vibrate(50);
+    
+    const bubble = wrapperElement.querySelector('.msg-bubble');
+    const rect = bubble.getBoundingClientRect(); 
+    const actionMenu = msgOptionsOverlay.querySelector('.action-menu');
+    
+    const overlayRect = msgOptionsOverlay.getBoundingClientRect();
+    const relativeTop = rect.top - overlayRect.top;
+    const relativeBottom = rect.bottom - overlayRect.top;
+    const relativeLeft = rect.left - overlayRect.left;
+    const relativeRight = overlayRect.width - (rect.right - overlayRect.left);
+
+    actionMenu.style.visibility = 'hidden';
+    actionMenu.style.display = 'block';
+
+    const menuHeight = actionMenu.offsetHeight || 50;
+
+    actionMenu.style.visibility = '';
+    actionMenu.style.display = '';
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+
+    if (spaceBelow < (menuHeight + 20)) {
+        actionMenu.style.top = (relativeTop - menuHeight - 3) + 'px'; 
+        actionMenu.style.transformOrigin = "bottom center";
+    } else {
+        actionMenu.style.top = (relativeBottom + 3) + 'px'; 
+        actionMenu.style.transformOrigin = "top center";
+    }
+
+    if (wrapperElement.classList.contains('me')) {
+        actionMenu.style.right = relativeRight + 'px';
+        actionMenu.style.left = 'auto';
+    } else {
+        actionMenu.style.left = relativeLeft + 'px';
+        actionMenu.style.right = 'auto';
+    }
+
+    msgOptionsOverlay.classList.add('active');
+}
+
+function cancelMsgPress() {
+    clearTimeout(msgPressTimer);
+}
+
+if (chatContainerNode) {
+    
+    const startMsgPress = (e) => {
+        if (e.type === 'mousedown') {
+            const input = document.getElementById('message_input');
+            if (document.activeElement === input) e.preventDefault();
+        }
+
+        const wrapper = e.target.closest('.msg-wrapper');
+        if (!wrapper) return;
+
+        isMsgLongPress = false;
+        selectedMsgIndex = Array.from(chatContainerNode.children).indexOf(wrapper);
+
+        msgPressTimer = setTimeout(() => {
+            isMsgLongPress = true;
+            showMsgOptions(wrapper);
+        }, 500); 
+    };
+
+    chatContainerNode.addEventListener('mousedown', startMsgPress);
+    chatContainerNode.addEventListener('touchstart', startMsgPress, { passive: true });
+    
+    chatContainerNode.addEventListener('mouseup', cancelMsgPress);
+    chatContainerNode.addEventListener('mouseleave', cancelMsgPress);
+    chatContainerNode.addEventListener('touchend', cancelMsgPress);
+    chatContainerNode.addEventListener('touchmove', cancelMsgPress);
+
+    chatContainerNode.addEventListener('contextmenu', (e) => {
+        const wrapper = e.target.closest('.msg-wrapper');
+        if (wrapper) {
+            e.preventDefault();
+            isMsgLongPress = true;
+            selectedMsgIndex = Array.from(chatContainerNode.children).indexOf(wrapper);
+            showMsgOptions(wrapper);
+        }
+    });
+
+    chatContainerNode.addEventListener('click', (e) => {
+        if (isMsgLongPress) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+
+        if (!chatContainerNode.classList.contains('privacy-mode')) return;
+
+        const bubble = e.target.closest('.msg-bubble');
+        if (!bubble) return;
+
+        if (!bubble.classList.contains('revealed')) {
+            e.preventDefault();
+            e.stopPropagation();
+            bubble.classList.add('revealed');
+            bubble.revealTimer = setTimeout(() => {
+                bubble.classList.remove('revealed');
+                delete bubble.revealTimer;
+            }, 5000);
+            if (navigator.vibrate) navigator.vibrate(50);
+        } else {
+            clearTimeout(bubble.revealTimer);
+            bubble.revealTimer = setTimeout(() => {
+                bubble.classList.remove('revealed');
+                delete bubble.revealTimer;
+            }, 5000);
+        }
+    }, true);
+}
+
+const btnDeleteMsg = document.getElementById('btn-delete-msg');
+if (btnDeleteMsg) {
+    btnDeleteMsg.addEventListener('click', async () => {
+        if (selectedMsgIndex > -1 && selectedMsgIndex < localChatHistory.length) {
+            
+            const msgToDelete = localChatHistory[selectedMsgIndex];
+            const msgId = msgToDelete.id;
+
+            localChatHistory.splice(selectedMsgIndex, 1); 
+            saveHistory();
+            rebuildChatUI(localChatHistory);
+
+            if (cryptoKey && currentTopic) {
+                const payloadObj = { type: 'DEL_MSG', id: msgId, senderId: MY_CLIENT_ID };
+                const encrypted = await encryptData(payloadObj, cryptoKey);
+                const mqttMsg = new Paho.MQTT.Message(encrypted);
+                mqttMsg.destinationName = `blackchat/room/${currentTopic}`;
+                mqttMsg.qos = 1;
+                mqttMsg.retained = true; 
+                queueOrSend(mqttMsg, false);
+            }
+        }
+        
+        if (msgOptionsOverlay) msgOptionsOverlay.classList.remove('active');
+        selectedMsgIndex = -1;
+    });
+}
+
+if (msgOptionsOverlay) {
+    msgOptionsOverlay.addEventListener('click', (e) => {
+        if (e.target === msgOptionsOverlay) {
+            msgOptionsOverlay.classList.remove('active');
+            selectedMsgIndex = -1;
+        }
+    });
+}
