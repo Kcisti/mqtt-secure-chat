@@ -1624,12 +1624,14 @@ if (!isNativeApp && window.visualViewport) {
     
     const adjustLayoutForKeyboard = () => {
         if (appContainer) {
+           
+            const isKeyboardOpen = window.visualViewport.height < window.innerHeight - 50;
 
-            appContainer.style.height = `${window.visualViewport.height}px`;
-            
-            if (window.visualViewport.height < window.innerHeight - 50) {
+            if (isKeyboardOpen) {
+                appContainer.style.height = `${window.visualViewport.height}px`;
                 appContainer.style.paddingBottom = '0px';
             } else {
+                appContainer.style.height = '100%';
                 appContainer.style.paddingBottom = 'env(safe-area-inset-bottom, 0px)';
             }
         }
