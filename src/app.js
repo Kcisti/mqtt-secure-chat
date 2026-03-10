@@ -397,7 +397,7 @@ function renderRoomList() {
         const roomTitle = roomNames[pin] ? roomNames[pin] : `Room ${displayPin}`;
 
         const isLocked = lockedRooms.includes(pin);
-        const lockIconHtml = isLocked ? `<ion-icon name="lock-closed" style="color: var(--text-muted); font-size: 0.9rem; margin-left: 6px;"></ion-icon>` : '';
+        const lockIconHtml = isLocked ? `<ion-icon name="lock-closed" style="color: var(--text-muted); font-size: 1.1rem; margin-left: 6px;"></ion-icon>` : '';
 
         const roomDiv = document.createElement('div');
         roomDiv.className = 'room-item';
@@ -655,6 +655,7 @@ function onConnectionLost(responseObject) {
 }
 
 // --- Message Handlers ---
+
 function initOneSignalNativo() {
     if (window.plugins && window.plugins.OneSignal) {
         const os = window.plugins.OneSignal;
@@ -662,42 +663,53 @@ function initOneSignalNativo() {
 
         os.Notifications.addEventListener('click', function(event) {
             const data = event.notification.additionalData;
-            if (data && data.roomPin) {
-                unreadRooms = unreadRooms.filter(p => p !== data.roomPin);
-                localStorage.setItem('bchat_unread', JSON.stringify(unreadRooms));
-                
-                setTimeout(() => {
-                    if (currentPin) disconnect();
-                    enterRoom(data.roomPin); 
-                }, 500);
-            }
-        });
-
-        os.Notifications.addEventListener('foregroundWillDisplay', function(event) {
-            const data = event.notification.additionalData;
-            
             let incomingPin = data ? (data.roomPin || data.fullPin || data.pin) : null;
-            
+
             if (incomingPin) {
-                // Se per caso arriva mascherato (es. 1234*), trova la stanza corrispondente
                 if (incomingPin.includes('*')) {
                     const prefix = incomingPin.replace('*', '');
                     const matchedRoom = savedRooms.find(p => p.startsWith(prefix));
                     if (matchedRoom) incomingPin = matchedRoom;
                 }
 
-                // Se la stanza esiste, non ci siamo già dentro e non ha già il pallino
+                unreadRooms = unreadRooms.filter(p => p !== incomingPin);
+                localStorage.setItem('bchat_unread', JSON.stringify(unreadRooms));
+                
+                setTimeout(() => {
+                    if (currentPin && currentPin !== incomingPin) {
+                        disconnect();
+                    }
+                    
+                    if (currentPin !== incomingPin) {
+                        enterRoom(incomingPin); 
+                    }
+                }, 500);
+            }
+        });
+
+        os.Notifications.addEventListener('foregroundWillDisplay', function(event) {
+            const data = event.notification.additionalData;
+            let incomingPin = data ? (data.roomPin || data.fullPin || data.pin) : null;
+            
+            if (incomingPin) {
+                if (incomingPin.includes('*')) {
+                    const prefix = incomingPin.replace('*', '');
+                    const matchedRoom = savedRooms.find(p => p.startsWith(prefix));
+                    if (matchedRoom) incomingPin = matchedRoom;
+                }
+
                 if (savedRooms.includes(incomingPin) && currentPin !== incomingPin) {
                     if (!unreadRooms.includes(incomingPin)) {
                         unreadRooms.push(incomingPin);
                         localStorage.setItem('bchat_unread', JSON.stringify(unreadRooms));
-                        renderRoomList(); // Ridisegna la lista col pallino!
+                        renderRoomList();
                     }
                 }
             }
         });
     }
 }
+
 document.addEventListener('deviceready', initOneSignalNativo, false);
 
 
@@ -1603,6 +1615,30 @@ if (window.Capacitor && window.Capacitor.Plugins.Keyboard) {
             appContainer.style.bottom = '1rem'; 
         }
     });
+}
+
+
+if (!isNativeApp && window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+        const appContainer = document.getElementById('app-container');
+        if (appContainer) {
+            appContainer.style.height = `${window.visualViewport.height}px`;
+            
+            setTimeout(() => {
+                window.scrollTo(0, 0);
+                const chat = document.getElementById("chat-messages");
+                if (chat) chat.scrollTop = chat.scrollHeight;
+            }, 100);
+        }
+    });
+
+   
+    document.addEventListener('touchmove', (e) => {
+        if (e.target.closest('#chat-messages') || e.target.closest('.room-list-body')) {
+            return; 
+        }
+        e.preventDefault(); 
+    }, { passive: false });
 }
 
 

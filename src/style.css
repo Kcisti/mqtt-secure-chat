@@ -130,8 +130,14 @@ body {
 }
 
 body.is-web {
-  height: 100dvh;
-  position: relative;
+  position: fixed; 
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100dvh; 
+  overflow: hidden;
+  padding-top: max(env(safe-area-inset-top, 0px), 10px); 
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 body.is-native {
@@ -156,6 +162,8 @@ body.is-native {
 body.is-web #app-container {
   width: 100%;
   height: 100%; 
+  display: flex;
+  flex-direction: column;
 }
 
 body.is-native #app-container {
