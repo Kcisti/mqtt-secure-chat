@@ -2,10 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover,
+  interactive-widget=resizes-content">
   <title>Secure Room</title>
   
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#000000">
   
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -76,6 +78,9 @@
             <span>App Settings</span>
           </div>
           <button id="btn-global-theme" class="action-item theme">Change Theme</button>
+          <button id="btn-global-autodownload" class="action-item">
+            <span id="autodownload-text">Auto Download: None</span>
+          </button>
           <button id="btn-global-wipe" class="action-item danger">Wipe All Data</button>
           <div class="action-menu-divider"></div>
         </div>
@@ -93,7 +98,7 @@
           <div id="overlay-status"></div>
         </div>
       </div>
-
+      
       <div id="room-options-overlay" class="new-room-overlay">
         <div class="action-menu">
 
@@ -102,6 +107,7 @@
           </div>
 
           <button id="btn-custom-name" class="action-item">Custom Name</button>
+          <button id="btn-lock-room" class="action-item">Lock Room</button>
 
           <button id="btn-remove-room" class="action-item danger">Remove Room</button>
 
@@ -164,15 +170,25 @@
           <ion-icon name="send"></ion-icon>
         </button>
       </div>
+      <div id="msg-options-overlay" class="new-room-overlay">
+        <div class="action-menu" style=" width: fit-content;">
+          <button id="btn-delete-msg" class="action-item danger" style="padding: 0.5 0.7rem; border: none; justify-content: center;">Delete Message</button>
+        </div>
+      </div>
     </div>
 
     <div id="viewer-screen" class="screen">
       <div class="chat-header">
         <h3 id="viewer-filename">Foto</h3>
-        <button id="close-viewer-btn">
-          <ion-icon name="close"></ion-icon>
-        </button>
-        <div class="header-spacer"></div>
+        <div class="viewer-btn-container">
+          <button id="download-viewer-btn" class="viewer-btn">
+            <ion-icon name="download"></ion-icon>
+          </button>
+          <button id="close-viewer-btn" class="viewer-btn">
+            <ion-icon name="close"></ion-icon>
+          </button>
+          <div class="header-spacer"></div>
+        </div>
       </div>
       
       <div id="viewer-content">

@@ -278,16 +278,6 @@ button {
 /* ========================================= */
 
 
-.unread-dot {
-    width: 12px;
-    height: 12px;
-    background-color: var(--primary); 
-    border-radius: 50%;
-    margin-left: auto; 
-    margin-right: 5px;
-    flex-shrink: 0;
-}
-
 .room-list-header {
   display: flex;
   justify-content: space-between;
