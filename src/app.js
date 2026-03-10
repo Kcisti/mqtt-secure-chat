@@ -142,6 +142,9 @@ async function loadHistory(pin) {
                 return true;
             });
             saveHistory(); 
+            if (localChatHistory.length > 0) {
+                localStorage.setItem(`last_read_${pin}`, localChatHistory[localChatHistory.length - 1].id);
+            }
         } else {
             localChatHistory = [];
         }
@@ -401,13 +404,14 @@ function renderRoomList() {
         
         roomDiv.oncontextmenu = (e) => { e.preventDefault(); return false; };
 
+
         const isUnread = unreadRooms.includes(pin);
-        const unreadDotHtml = isUnread ? `<div class="unread-dot"></div>` : '';
+        
+        const unreadDotHtml = isUnread ? `<div class="unread-dot" style="background-color: var(--primary); width: 12px; height: 12px; border-radius: 50%; margin-left: auto; margin-right: 10px; box-shadow: 0 0 8px var(--primary); flex-shrink: 0;"></div>` : '';
 
         roomDiv.innerHTML = `
           <div class="room-avatar"><ion-icon name="lock-closed"></ion-icon></div>
-          <div class="room-details">
-            <div class="room-name" style="display:flex; align-items:center;">${roomTitle} ${lockIconHtml}</div>
+          <div class="room-details" style="flex-grow: 1;"> <div class="room-name" style="display:flex; align-items:center;">${roomTitle} ${lockIconHtml}</div>
             <div class="room-last-msg">${lastActiveText}</div>
           </div>
           ${unreadDotHtml}
@@ -462,7 +466,10 @@ async function enterRoom(pin) {
         }
     }
 
-    
+    if (isNativeApp && window.plugins && window.plugins.OneSignal) {
+        window.plugins.OneSignal.Notifications.clearAll();
+    }
+
     unreadRooms = unreadRooms.filter(p => p !== pin);
     localStorage.setItem('bchat_unread', JSON.stringify(unreadRooms));
     renderRoomList(); 
@@ -526,23 +533,26 @@ async function enterRoom(pin) {
 
     await fetchMqttCreds();
 
-    client = new Paho.MQTT.Client(BROKER_URL, BROKER_PORT, MY_CLIENT_ID);
-    client.onConnectionLost = onConnectionLost;
-    client.onMessageArrived = onMessageArrived;
 
-    client.connect({
-      userName: BROKER_USER, 
-      password: BROKER_PASS,
-      useSSL: true,
-      cleanSession: false, 
-      keepAliveInterval: 30, 
-      timeout: 3,
-      onSuccess: onConnect,
-      onFailure: (err) => {
-        setConnectionStatus(false, currentPin.substring(0, 4) + "*", "Connection Error");
-        alert("Unable to connect to server.");
-      }
-    });
+    if (!client || !client.isConnected()) {
+        await fetchMqttCreds();
+        client = new Paho.MQTT.Client(BROKER_URL, BROKER_PORT, MY_CLIENT_ID);
+        client.onConnectionLost = onConnectionLost;
+        client.onMessageArrived = onMessageArrived; 
+
+        client.connect({
+            userName: BROKER_USER, password: BROKER_PASS, useSSL: true,
+            cleanSession: false, keepAliveInterval: 30, timeout: 3,
+            onSuccess: onConnect,
+            onFailure: (err) => {
+                setConnectionStatus(false, currentPin.substring(0, 4) + "*", "Connection Error");
+            }
+        });
+    } else {
+
+        client.onMessageArrived = onMessageArrived;
+        onConnect();
+    }
 }
 
 function disconnect() {
@@ -578,6 +588,7 @@ function disconnect() {
   if (savedRooms.length > 0) {
       renderRoomList();
       showScreen('room-list-screen');
+      setTimeout(connectBackgroundMQTT, 500);
   } else {
       showScreen('login-screen');
   }
@@ -649,30 +660,39 @@ function initOneSignalNativo() {
         const os = window.plugins.OneSignal;
         os.initialize("fbcbc6a0-8e00-4bd6-b389-c2fc6676ece2");
 
-        // 1. GESTIONE CLICK (Apre la chat)
         os.Notifications.addEventListener('click', function(event) {
             const data = event.notification.additionalData;
             if (data && data.roomPin) {
-                // Rimuove dai non letti quando clicchi
                 unreadRooms = unreadRooms.filter(p => p !== data.roomPin);
                 localStorage.setItem('bchat_unread', JSON.stringify(unreadRooms));
                 
                 setTimeout(() => {
                     if (currentPin) disconnect();
-                    enterRoom(data.roomPin); // 🔴 Ora riceve il PIN reale!
+                    enterRoom(data.roomPin); 
                 }, 500);
             }
         });
 
-        // 2. GESTIONE PALLINO VIOLA (Mentre l'app è aperta)
         os.Notifications.addEventListener('foregroundWillDisplay', function(event) {
             const data = event.notification.additionalData;
-            if (data && data.roomPin) {
-                // Se non siamo in quella chat, aggiungiamo il pallino
-                if (currentPin !== data.roomPin && !unreadRooms.includes(data.roomPin)) {
-                    unreadRooms.push(data.roomPin);
-                    localStorage.setItem('bchat_unread', JSON.stringify(unreadRooms));
-                    renderRoomList(); // Aggiorna la lista UI
+            
+            let incomingPin = data ? (data.roomPin || data.fullPin || data.pin) : null;
+            
+            if (incomingPin) {
+                // Se per caso arriva mascherato (es. 1234*), trova la stanza corrispondente
+                if (incomingPin.includes('*')) {
+                    const prefix = incomingPin.replace('*', '');
+                    const matchedRoom = savedRooms.find(p => p.startsWith(prefix));
+                    if (matchedRoom) incomingPin = matchedRoom;
+                }
+
+                // Se la stanza esiste, non ci siamo già dentro e non ha già il pallino
+                if (savedRooms.includes(incomingPin) && currentPin !== incomingPin) {
+                    if (!unreadRooms.includes(incomingPin)) {
+                        unreadRooms.push(incomingPin);
+                        localStorage.setItem('bchat_unread', JSON.stringify(unreadRooms));
+                        renderRoomList(); // Ridisegna la lista col pallino!
+                    }
                 }
             }
         });
@@ -733,6 +753,8 @@ async function onMessageArrived(message) {
       saveHistory();
       addMessageToUI(msgObj.text, 'peer', data.isBomb, msgObj.msgType, msgObj.fileName);
       playNotificationSound();
+
+      localStorage.setItem(`last_read_${currentPin}`, data.id);
       
       if (data.isBomb) startAutodestructTimer(data.id);
   }
@@ -1203,7 +1225,75 @@ if (overlayPinInput) {
     });
 }
 
-window.addEventListener('load', () => {
+
+async function connectBackgroundMQTT() {
+    if (client && client.isConnected()) return;
+
+    await fetchMqttCreds();
+    client = new Paho.MQTT.Client(BROKER_URL, BROKER_PORT, MY_CLIENT_ID + "_bg");
+    client.onConnectionLost = onConnectionLost;
+    client.onMessageArrived = onBackgroundMessageArrived; 
+
+    client.connect({
+        userName: BROKER_USER,
+        password: BROKER_PASS,
+        useSSL: true,
+        cleanSession: false,
+        keepAliveInterval: 30,
+        timeout: 3,
+        onSuccess: async () => {
+            console.log("Background MQTT Connected");
+
+            for (const pin of savedRooms) {
+                const topic = await hashPinForTopic(pin);
+                client.subscribe(`blackchat/room/${topic}`, { qos: 1 });
+            }
+        },
+        onFailure: (err) => console.log("Background MQTT failed")
+    });
+}
+
+
+async function onBackgroundMessageArrived(message) {
+
+    if (currentPin) return; 
+
+    const incomingTopic = message.destinationName.split('/').pop();
+
+    for (const pin of savedRooms) {
+        const expectedTopic = await hashPinForTopic(pin);
+        
+        if (incomingTopic === expectedTopic) {
+            
+            
+            try {
+                const tempKey = await deriveKey(pin);
+                const data = await decryptData(message.payloadString, tempKey);
+                
+
+                if (data && data.senderId !== MY_CLIENT_ID && !data.type.includes('WIPE')) {
+                    const lastReadId = localStorage.getItem(`last_read_${pin}`);
+                    if (data.id === lastReadId) {
+                        break; 
+                    }
+
+                    if (!unreadRooms.includes(pin)) {
+                        unreadRooms.push(pin);
+                        localStorage.setItem('bchat_unread', JSON.stringify(unreadRooms));
+                        renderRoomList(); 
+                    }
+                }
+            } catch (e) {
+
+            }
+            break; 
+        }
+    }
+}
+
+
+
+window.addEventListener('load', async () => {
     const overlay = document.getElementById('transition-overlay');
     if (overlay) {
         setTimeout(() => { overlay.classList.remove('active'); }, 1500);
@@ -1212,6 +1302,7 @@ window.addEventListener('load', () => {
     if (savedRooms.length > 0) {
         renderRoomList();
         showScreen('room-list-screen');
+        await connectBackgroundMQTT();
     } else {
         showScreen('login-screen');
     }
