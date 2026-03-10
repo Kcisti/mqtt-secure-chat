@@ -276,6 +276,18 @@ button {
 /* ========================================= */
 /* 5. ROOM LIST SCREEN                       */
 /* ========================================= */
+
+
+.unread-dot {
+    width: 12px;
+    height: 12px;
+    background-color: var(--primary); 
+    border-radius: 50%;
+    margin-left: auto; 
+    margin-right: 5px;
+    flex-shrink: 0;
+}
+
 .room-list-header {
   display: flex;
   justify-content: space-between;
@@ -346,6 +358,7 @@ button {
   padding: 12px;
   background-color: var(--room-item);
   border-radius: 12px;
+  position: relative;
   margin-bottom: 10px;
   cursor: pointer;
   transition: transform 0.2s, background-color 0.2s;

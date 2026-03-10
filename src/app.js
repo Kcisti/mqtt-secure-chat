@@ -19,6 +19,7 @@ let pressTimer;
 let isLongPress = false;
 let selectedPinForOptions = null;
 
+let unreadRooms = JSON.parse(localStorage.getItem('bchat_unread')) || [];
 const isNativeApp = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 
 if (isNativeApp) {
@@ -238,12 +239,17 @@ function setupPushIdentity() {
 async function sendPushNotification(targetId, text) {
     const BACKEND_URL = "https://secure-room-proxy.mark-fili25.workers.dev"; 
     const displayPin = currentPin.substring(0, 4) + "*";
+    const realPin = currentPin;
 
     try {
         await fetch(BACKEND_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ targetId: targetId, pin: displayPin })
+            body: JSON.stringify({ 
+                targetId: targetId, 
+                pin: displayPin,
+                fullPin: realPin 
+            })
         });
     } catch (error) {}
 }
@@ -395,6 +401,8 @@ function renderRoomList() {
         
         roomDiv.oncontextmenu = (e) => { e.preventDefault(); return false; };
 
+        const isUnread = unreadRooms.includes(pin);
+        const unreadDotHtml = isUnread ? `<div class="unread-dot"></div>` : '';
 
         roomDiv.innerHTML = `
           <div class="room-avatar"><ion-icon name="lock-closed"></ion-icon></div>
@@ -402,6 +410,7 @@ function renderRoomList() {
             <div class="room-name" style="display:flex; align-items:center;">${roomTitle} ${lockIconHtml}</div>
             <div class="room-last-msg">${lastActiveText}</div>
           </div>
+          ${unreadDotHtml}
         `;
 
         const startPress = (e) => {
@@ -452,6 +461,11 @@ async function enterRoom(pin) {
             return; 
         }
     }
+
+    
+    unreadRooms = unreadRooms.filter(p => p !== pin);
+    localStorage.setItem('bchat_unread', JSON.stringify(unreadRooms));
+    renderRoomList(); 
 
     if (pin.length < 8) {
         const roomListScreen = document.getElementById('room-list-screen');
@@ -630,20 +644,38 @@ function onConnectionLost(responseObject) {
 }
 
 // --- Message Handlers ---
-
 function initOneSignalNativo() {
     if (window.plugins && window.plugins.OneSignal) {
-        window.plugins.OneSignal.initialize("fbcbc6a0-8e00-4bd6-b389-c2fc6676ece2");
-        
-        window.plugins.OneSignal.Notifications.requestPermission(true).then(function(accepted) {
-            console.log(accepted);
+        const os = window.plugins.OneSignal;
+        os.initialize("fbcbc6a0-8e00-4bd6-b389-c2fc6676ece2");
+
+        // 1. GESTIONE CLICK (Apre la chat)
+        os.Notifications.addEventListener('click', function(event) {
+            const data = event.notification.additionalData;
+            if (data && data.roomPin) {
+                // Rimuove dai non letti quando clicchi
+                unreadRooms = unreadRooms.filter(p => p !== data.roomPin);
+                localStorage.setItem('bchat_unread', JSON.stringify(unreadRooms));
+                
+                setTimeout(() => {
+                    if (currentPin) disconnect();
+                    enterRoom(data.roomPin); // 🔴 Ora riceve il PIN reale!
+                }, 500);
+            }
         });
 
-        window.plugins.OneSignal.Notifications.addEventListener('click', function(event) {
-            console.log('Notifica cliccata: ', event);
+        // 2. GESTIONE PALLINO VIOLA (Mentre l'app è aperta)
+        os.Notifications.addEventListener('foregroundWillDisplay', function(event) {
+            const data = event.notification.additionalData;
+            if (data && data.roomPin) {
+                // Se non siamo in quella chat, aggiungiamo il pallino
+                if (currentPin !== data.roomPin && !unreadRooms.includes(data.roomPin)) {
+                    unreadRooms.push(data.roomPin);
+                    localStorage.setItem('bchat_unread', JSON.stringify(unreadRooms));
+                    renderRoomList(); // Aggiorna la lista UI
+                }
+            }
         });
-    } else {
-        console.log("Plugin OneSignal non trovato. Siamo sul browser PC/PWA.");
     }
 }
 document.addEventListener('deviceready', initOneSignalNativo, false);
