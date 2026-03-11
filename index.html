@@ -156,20 +156,25 @@
           <div class="icon-circle"><ion-icon name="document-text"></ion-icon></div>
         </div>
       </div>
+
       <div class="chat-input-area"> 
         <div class="input-container">
           <input type="search" id="message_input" placeholder="Type a message..." 
           autocomplete="off" autocorrect="off" autocapitalize="off"
           spellcheck="false" data-lpignore="true">
 
-          <button id="attach-btn" aria-label="Aggiungi">
+          <button id="attach-btn" aria-label="add">
             <ion-icon name="add"></ion-icon>
           </button>
         </div>
-        <button id="send-btn" >
+        <button id="send-btn" style="display: none;">
           <ion-icon name="send"></ion-icon>
         </button>
+        <button id="record-btn">
+          <ion-icon name="mic"></ion-icon>
+        </button>
       </div>
+
       <div id="msg-options-overlay" class="new-room-overlay">
         <div class="action-menu" style=" width: fit-content;">
           <button id="btn-delete-msg" class="action-item danger" style="padding: 0.5 0.7rem; border: none; justify-content: center;">Delete Message</button>

@@ -79,7 +79,121 @@ export function addMessageToUI(content, sender, isBomb = false, msgType = 'text'
         document.body.removeChild(downloadLink);
     };
     bubble.appendChild(fileDiv);
-  } else {
+  } 
+  else if (msgType === 'audio') {
+    const audioEl = document.createElement('audio');
+    audioEl.src = content; 
+    audioEl.preload = 'auto';
+
+    const playerContainer = document.createElement('div');
+    playerContainer.className = 'custom-audio-player';
+    
+    playerContainer.innerHTML = `
+        <button class="audio-play-pause">
+            <ion-icon name="play"></ion-icon>
+        </button>
+        <div class="audio-info">
+            <div class="audio-progress-container">
+                <div class="audio-progress-bar"></div>
+            </div>
+        </div>
+        <span class="audio-time">0:00</span>
+    `;
+
+    const playPauseBtn = playerContainer.querySelector('.audio-play-pause');
+    const playIcon = playerContainer.querySelector('.audio-play-pause ion-icon');
+    const timeDisplay = playerContainer.querySelector('.audio-time');
+    const progressBar = playerContainer.querySelector('.audio-progress-bar');
+
+    bubble.appendChild(playerContainer);
+    bubble.appendChild(audioEl);
+
+    // --- LOGICA ---
+    const formatTime = (seconds) => {
+      if (isNaN(seconds) || !isFinite(seconds) || seconds < 0) return "0:00";
+      const minutes = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+    };
+
+    let actualDuration = 0;
+
+    // MAGIA: Leggiamo la durata dal nome del file! (es. vocal_5.m4a -> 5)
+    if (fileName && fileName.includes('_')) {
+        const secExt = fileName.split('_')[1]; // Prende "5.m4a"
+        actualDuration = parseFloat(secExt) || 0; // Estrae il 5
+    }
+
+    // Appena carica, mostriamo il tempo corretto. Se il file non aveva il tempo nel nome, proviamo a leggerlo normalmente.
+    audioEl.addEventListener('loadedmetadata', () => {
+        if (actualDuration === 0 && isFinite(audioEl.duration) && audioEl.duration > 0) {
+            actualDuration = audioEl.duration;
+        }
+        if (actualDuration > 0) {
+            timeDisplay.textContent = formatTime(actualDuration);
+        }
+    });
+
+    audioEl.addEventListener('timeupdate', () => {
+      const current = audioEl.currentTime;
+      
+      if (actualDuration > 0) {
+          let percentage = (current / actualDuration) * 100;
+          if (percentage > 100) percentage = 100;
+          progressBar.style.width = `${percentage}%`;
+      }
+      
+      if (current > 0 && !audioEl.paused) {
+          timeDisplay.textContent = formatTime(current);
+      }
+    });
+
+    const togglePlay = () => {
+      if (audioEl.paused) {
+        document.querySelectorAll('audio').forEach(el => {
+          if (el !== audioEl) el.pause();
+        });
+        
+        playIcon.setAttribute('name', 'pause');
+        
+        audioEl.play().catch(err => {
+            playIcon.setAttribute('name', 'play');
+            timeDisplay.textContent = "Err";
+        });
+      } else {
+        audioEl.pause();
+        playIcon.setAttribute('name', 'play');
+      }
+    };
+
+    playPauseBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); 
+      togglePlay();
+    });
+
+    playerContainer.addEventListener('click', (e) => {
+      if (e.target !== playPauseBtn && !playPauseBtn.contains(e.target)) {
+        togglePlay();
+      }
+    });
+
+    audioEl.addEventListener('ended', () => {
+      playIcon.setAttribute('name', 'play');
+      progressBar.style.width = '0%';
+      // Rimette il testo sulla durata totale
+      timeDisplay.textContent = formatTime(actualDuration);
+      audioEl.currentTime = 0; // Riavvolge per poterlo riascoltare
+    });
+
+    if (isBomb) {
+      const icon = document.createElement('ion-icon');
+      icon.setAttribute('name', 'time');
+      icon.className = 'bomb-icon bomb-icon-img';
+      bubble.appendChild(icon);
+    }
+  }
+  
+  else {
     if (isBomb) {
       const textSpan = document.createElement('span');
       textSpan.innerText = content;

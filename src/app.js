@@ -157,19 +157,21 @@ async function loadHistory(pin) {
 }
 
 function resetInputState() {
-  const input = document.getElementById('message_input');
-  const attachIcon = document.querySelector('#attach-btn ion-icon');
-  const panelIcon = document.querySelector('#panel-bomb-icon');
-  
-  if (input) input.value = '';
-  if (attachIcon) {
-      attachIcon.setAttribute('name', 'add');
-      attachIcon.style.color = '';
-  }
-  if (panelIcon) {
-      panelIcon.setAttribute('name', 'radio-button-off');
-      panelIcon.style.color = '';
-  }
+    const input = document.getElementById('message_input');
+    const attachIcon = document.querySelector('#attach-btn ion-icon');
+    const panelIcon = document.querySelector('#panel-bomb-icon');
+
+    if (input) input.value = '';
+    if (attachIcon) {
+        attachIcon.setAttribute('name', 'add');
+        attachIcon.style.color = '';
+    }
+    if (panelIcon) {
+        panelIcon.setAttribute('name', 'radio-button-off');
+        panelIcon.style.color = '';
+    }
+    if (document.getElementById('record-btn')) document.getElementById('record-btn').style.display = 'flex';
+    if (document.getElementById('send-btn')) document.getElementById('send-btn').style.display = 'none';
 }
 
 function formatLastActive(timestamp) {
@@ -714,145 +716,134 @@ document.addEventListener('deviceready', initOneSignalNativo, false);
 
 
 async function onMessageArrived(message) {
-  if (message.destinationName.includes("push_id")) {
-    try {
-        const info = JSON.parse(message.payloadString);
-        if (info.mqttId !== MY_CLIENT_ID) peerPushId = info.pushId;
-    } catch (e) {}
-    return;
-  }
-  
-  const data = await decryptData(message.payloadString, cryptoKey);
-  if (!data || data.senderId === MY_CLIENT_ID) return;
-
-  if (data.type === 'WIPE') {
-      localChatHistory = [];
-      localStorage.removeItem(`bchat_history_${currentPin}`);
-      localStorage.removeItem(`bchat_meta_${currentPin}`);
-      
-      savedRooms = savedRooms.filter(pin => pin !== currentPin);
-      localStorage.setItem('bchat_rooms', JSON.stringify(savedRooms));
-      
-      rebuildChatUI(localChatHistory);
-      disconnect(); 
+    if (message.destinationName.includes("push_id")) {
+      try {
+          const info = JSON.parse(message.payloadString);
+          if (info.mqttId !== MY_CLIENT_ID) peerPushId = info.pushId;
+      } catch (e) {}
       return;
-  }
+    }
 
-  if (data.type === 'DEL_MSG') {
-      const initialLength = localChatHistory.length;
-      localChatHistory = localChatHistory.filter(m => m.id !== data.id);
-      
-      if (localChatHistory.length !== initialLength) {
-          saveHistory();
-          rebuildChatUI(localChatHistory);
-      }
-      return; 
-  }
+    const data = await decryptData(message.payloadString, cryptoKey);
+    if (!data || data.senderId === MY_CLIENT_ID) return;    
+    if (data.type === 'WIPE') {
+        localChatHistory = [];
+        localStorage.removeItem(`bchat_history_${currentPin}`);
+        localStorage.removeItem(`bchat_meta_${currentPin}`);
 
-  if ((data.type === 'MSG' || data.type === 'IMG' || data.type === 'LOC' || data.type === 'DOC') && !messageExists(data.id)) {
-      let msgType = 'text';
-      if (data.type === 'IMG') msgType = 'image';
-      if (data.type === 'LOC') msgType = 'location';
-      if (data.type === 'DOC') msgType = 'document'; 
-      
-      const msgObj = { 
-        id: data.id, sender: 'peer', text: data.text, time: Date.now(), 
-        isBomb: data.isBomb, msgType: msgType,
-        fileName: data.fileName || (msgType === 'location' ? 'location.gps' : (msgType === 'document' ? 'document.pdf' : 'image.jpg'))
-      };
-      
-      localChatHistory.push(msgObj);
-      saveHistory();
-      addMessageToUI(msgObj.text, 'peer', data.isBomb, msgObj.msgType, msgObj.fileName);
-      playNotificationSound();
+        savedRooms = savedRooms.filter(pin => pin !== currentPin);
+        localStorage.setItem('bchat_rooms', JSON.stringify(savedRooms));
 
-      localStorage.setItem(`last_read_${currentPin}`, data.id);
-      
-      if (data.isBomb) startAutodestructTimer(data.id);
-  }
+        rebuildChatUI(localChatHistory);
+        disconnect(); 
+        return;
+    }   
+    if (data.type === 'DEL_MSG') {
+        const initialLength = localChatHistory.length;
+        localChatHistory = localChatHistory.filter(m => m.id !== data.id);
+
+        if (localChatHistory.length !== initialLength) {
+            saveHistory();
+            rebuildChatUI(localChatHistory);
+        }
+        return; 
+    }   
+    if ((data.type === 'MSG' || data.type === 'IMG' || data.type === 'LOC' || data.type === 'DOC' || data.type === 'AUD') && !messageExists(data.id)) {
+        let msgType = 'text';
+        if (data.type === 'IMG') msgType = 'image';
+        if (data.type === 'LOC') msgType = 'location';
+        if (data.type === 'DOC') msgType = 'document'; 
+        if (data.type === 'AUD') msgType = 'audio'; 
+        const msgObj = { 
+          id: data.id, sender: 'peer', text: data.text, time: Date.now(), 
+          isBomb: data.isBomb, msgType: msgType,
+          fileName: data.fileName || (msgType === 'location' ? 'location.gps' : (msgType === 'document' ? 'document.pdf' : (msgType === 'audio' ? 'audio.m4a' : 'image.jpg')))
+        };  
+        localChatHistory.push(msgObj);
+        saveHistory();
+        addMessageToUI(msgObj.text, 'peer', data.isBomb, msgObj.msgType, msgObj.fileName);
+        playNotificationSound();    
+        localStorage.setItem(`last_read_${currentPin}`, data.id);
+
+        if (data.isBomb) startAutodestructTimer(data.id);
+    }
 }
 
 async function sendMessage() {
-  const input = document.getElementById('message_input');
-  const text = input.value.trim();
-  
-  const attachIcon = document.querySelector('#attach-btn ion-icon');
-  const panelIcon = document.querySelector('#panel-bomb-icon');
-  const isBombActive = (attachIcon && attachIcon.getAttribute('name') === 'radio-button-on') || 
-                       (panelIcon && panelIcon.getAttribute('name') === 'radio-button-on');
-  
-  if (!text) return;
+    const input = document.getElementById('message_input');
+    const text = input.value.trim();
 
-  if (text === `exit`) { resetInputState(); disconnect(); return; }
-  
-  if (text === `clear`) { 
-      localChatHistory = []; 
+    const attachIcon = document.querySelector('#attach-btn ion-icon');
+    const panelIcon = document.querySelector('#panel-bomb-icon');
+    const isBombActive = (attachIcon && attachIcon.getAttribute('name') === 'radio-button-on') || 
+                         (panelIcon && panelIcon.getAttribute('name') === 'radio-button-on');
+
+    if (!text) return;  
+    if (text === `exit`) { resetInputState(); disconnect(); return; }
+
+    if (text === `clear`) { 
+        localChatHistory = []; 
+        localStorage.removeItem(`bchat_history_${currentPin}`);
+        localStorage.removeItem(`bchat_meta_${currentPin}`); 
+        document.getElementById("chat-messages").innerHTML = ''; 
+        resetInputState(); 
+        return; 
+    }   
+    if (text.toLowerCase() === 'wipe') {
       localStorage.removeItem(`bchat_history_${currentPin}`);
-      localStorage.removeItem(`bchat_meta_${currentPin}`); 
-      document.getElementById("chat-messages").innerHTML = ''; 
-      resetInputState(); 
+      localStorage.removeItem(`bchat_meta_${currentPin}`);  
+      savedRooms = savedRooms.filter(pin => pin !== currentPin);
+      localStorage.setItem('bchat_rooms', JSON.stringify(savedRooms));
+    
+      if (roomNames[currentPin]) {
+          delete roomNames[currentPin];
+          localStorage.setItem('bchat_names', JSON.stringify(roomNames));
+      }
+      localChatHistory = [];
+      currentPin = "";
+      currentTopic = "";
+      cryptoKey = null; 
+      if (client && client.isConnected()) {
+          client.disconnect();
+      } 
+      document.getElementById('message_input').value = '';
+      resetInputState();
+
+      renderRoomList();
+      showScreen('room-list-screen');
+
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+
       return; 
-  }
+    }   
+    if (text.toLowerCase() === `sweet pink muffin`) {
+        document.body.classList.remove('light-theme'); 
+        const isPink = document.body.classList.toggle('pink-theme');
 
-  if (text.toLowerCase() === 'wipe') {
-    localStorage.removeItem(`bchat_history_${currentPin}`);
-    localStorage.removeItem(`bchat_meta_${currentPin}`);
-
-    savedRooms = savedRooms.filter(pin => pin !== currentPin);
-    localStorage.setItem('bchat_rooms', JSON.stringify(savedRooms));
     
-    if (roomNames[currentPin]) {
-        delete roomNames[currentPin];
-        localStorage.setItem('bchat_names', JSON.stringify(roomNames));
-    }
-    localChatHistory = [];
-    currentPin = "";
-    currentTopic = "";
-    cryptoKey = null;
+        localStorage.setItem('bchat_theme', isPink ? 'pink' : 'dark');
 
-    if (client && client.isConnected()) {
-        client.disconnect();
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        resetInputState(); 
+        return; 
     }
 
-    document.getElementById('message_input').value = '';
-    resetInputState();
-    
-    renderRoomList();
-    showScreen('room-list-screen');
-    
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-      
-    return; 
-  }
+    const msgIdText = Date.now() + '-txt-' + Math.random().toString(36).substr(2, 9);
+    const msgObjText = { id: msgIdText, sender: 'me', text: text, time: Date.now(), isBomb: isBombActive };
 
-  if (text.toLowerCase() === `sweet pink muffin`) {
-      document.body.classList.remove('light-theme'); 
-      const isPink = document.body.classList.toggle('pink-theme');
-      
-     
-      localStorage.setItem('bchat_theme', isPink ? 'pink' : 'dark');
-      
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-      resetInputState(); 
-      return; 
-  }
+    localChatHistory.push(msgObjText);
+    saveHistory();
+    addMessageToUI(text, 'me', isBombActive);
 
-  const msgIdText = Date.now() + '-txt-' + Math.random().toString(36).substr(2, 9);
-  const msgObjText = { id: msgIdText, sender: 'me', text: text, time: Date.now(), isBomb: isBombActive };
-  
-  localChatHistory.push(msgObjText);
-  saveHistory();
-  addMessageToUI(text, 'me', isBombActive);
-  
-  const payloadObjText = { type: 'MSG', text: text, id: msgIdText, senderId: MY_CLIENT_ID, isBomb: isBombActive };
-  const encryptedText = await encryptData(payloadObjText, cryptoKey);
-  const messageText = new Paho.MQTT.Message(encryptedText);
-  messageText.destinationName = `blackchat/room/${currentTopic}`;
-  messageText.qos = 1; messageText.retained = true; 
-  queueOrSend(messageText, true);
-  
-  if (isBombActive) startAutodestructTimer(msgIdText);
-  resetInputState(); 
+    const payloadObjText = { type: 'MSG', text: text, id: msgIdText, senderId: MY_CLIENT_ID, isBomb: isBombActive };
+    const encryptedText = await encryptData(payloadObjText, cryptoKey);
+    const messageText = new Paho.MQTT.Message(encryptedText);
+    messageText.destinationName = `blackchat/room/${currentTopic}`;
+    messageText.qos = 1; messageText.retained = true; 
+    queueOrSend(messageText, true);
+
+    if (isBombActive) startAutodestructTimer(msgIdText);
+    resetInputState(); 
 }
 
 function processAndSendImage(e) {
@@ -1107,6 +1098,98 @@ async function handleLocation(e) {
     }
 }
 
+// --- REGISTRAZIONE VOCALE ---
+let mediaRecorder;
+let audioChunks = [];
+let isRecording = false;
+let recordStartTime = 0; // CRONOMETRO AGGIUNTO
+
+async function handleRecord(e) {
+    if (e && e.type !== 'click') e.preventDefault();
+    const recordBtn = document.getElementById('record-btn');
+    const icon = recordBtn.querySelector('ion-icon');
+
+    if (isRecording) {
+        // FERMA E INVIA
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+        isRecording = false;
+        recordBtn.classList.remove('recording');
+        icon.setAttribute('name', 'mic');
+    } else {
+        // INIZIA REGISTRAZIONE
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = event => {
+                if (event.data.size > 0) audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                // Calcoliamo i secondi esatti passati da quando ha premuto REC
+                const durationSec = Math.max(1, Math.round((Date.now() - recordStartTime) / 1000));
+                
+                const audioType = mediaRecorder.mimeType || (isNativeApp ? 'audio/mp4' : 'audio/webm');
+                const audioBlob = new Blob(audioChunks, { type: audioType }); 
+                
+                stream.getTracks().forEach(track => track.stop()); 
+                
+                if (audioBlob.size > 2 * 1024 * 1024) {
+                    alert("Audio too long [MAX ~1.5 min]");
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = async function() {
+                    const base64Audio = reader.result;
+                    const msgId = Date.now() + '-aud-' + Math.random().toString(36).substr(2, 9);
+                    
+                    const attachIcon = document.querySelector('#attach-btn ion-icon');
+                    const panelIcon = document.querySelector('#panel-bomb-icon');
+                    const isBombActive = (attachIcon && attachIcon.getAttribute('name') === 'radio-button-on') || 
+                                         (panelIcon && panelIcon.getAttribute('name') === 'radio-button-on');
+
+                    // NASCONDIAMO LA DURATA NEL NOME FILE (es. vocal_7.m4a)
+                    const dynamicFileName = `vocal_${durationSec}.m4a`;
+
+                    const msgObj = { id: msgId, sender: 'me', text: base64Audio, time: Date.now(), isBomb: isBombActive, msgType: 'audio', fileName: dynamicFileName };
+                    
+                    localChatHistory.push(msgObj);
+                    saveHistory();
+                    addMessageToUI(base64Audio, 'me', isBombActive, 'audio', dynamicFileName);
+
+                    const payloadObj = { type: 'AUD', text: base64Audio, id: msgId, senderId: MY_CLIENT_ID, isBomb: isBombActive, fileName: dynamicFileName };
+                    const encrypted = await encryptData(payloadObj, cryptoKey);
+                    
+                    const message = new Paho.MQTT.Message(encrypted);
+                    message.destinationName = `blackchat/room/${currentTopic}`;
+                    message.qos = 1; message.retained = true; 
+                    queueOrSend(message, true);
+
+                    if (isBombActive) startAutodestructTimer(msgId);
+                };
+            };
+
+            recordStartTime = Date.now(); // AVVIA IL CRONOMETRO
+            mediaRecorder.start();
+            isRecording = true;
+            recordBtn.classList.add('recording');
+            icon.setAttribute('name', 'square'); 
+            if (navigator.vibrate) navigator.vibrate(50); 
+
+        } catch (err) {
+            alert("Microphone access denied.");
+        }
+    }
+}
+
+const recordBtn = document.getElementById('record-btn');
+bindSmartButton(recordBtn, handleRecord);
+
 function enterRoomWithRipple(pin, event) {
     const expander = document.createElement('div');
     expander.className = 'dark-transition-expander';
@@ -1145,12 +1228,21 @@ if (msgInput) {
       const panelIcon = document.querySelector('#panel-bomb-icon');
       const isBomb = panelIcon ? panelIcon.getAttribute('name') === 'radio-button-on' : false;
       
+      const recordBtn = document.getElementById('record-btn');
+      const sendBtn = document.getElementById('send-btn');
+
       if (this.value.trim().length > 0) {
+        if (recordBtn) recordBtn.style.display = 'none';
+        if (sendBtn) sendBtn.style.display = 'flex';
+
         if (attachIcon.getAttribute('name') === 'add') {
           attachIcon.setAttribute('name', isBomb ? 'radio-button-on' : 'radio-button-off');
           attachIcon.style.color = isBomb ? 'var(--danger)' : '';
         }
       } else {
+        if (recordBtn) recordBtn.style.display = 'flex';
+        if (sendBtn) sendBtn.style.display = 'none';
+
         attachIcon.setAttribute('name', 'add'); 
         attachIcon.style.color = ''; 
       }
