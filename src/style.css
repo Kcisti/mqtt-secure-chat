@@ -42,6 +42,15 @@
   --fs-chat-h3: 1.5rem;
   --fs-bubble: 1.28rem;
   --fs-panel-text: 1.1rem;
+
+  --audio-time-me:var(--text-muted);
+  --audio-bar-me:var(--text-muted);
+  --audio-play-me:var(--text-main);
+  --audio-con-me: rgba(255, 255, 255, 0.2);
+  --audio-time-peer:var(--text-muted);
+  --audio-bar-peer:var(--text-muted);
+  --audio-play-peer:var(--text-main);
+  --audio-con-peer: rgba(255, 255, 255, 0.2);
 }
 
 body.is-native {
@@ -83,6 +92,16 @@ body.light-theme {
   --avatar-item: #ceced1;
   --border-color: #e5e7eb;
   --transition-bg: rgba(255, 255, 255, 0.96); 
+
+  --audio-time-me:#a8a8a8;
+  --audio-bar-me:#a8a8a8;
+  --audio-play-me: #fafafa;
+  --audio-con-me: rgba(255, 255, 255, 0.2);
+
+  --audio-time-peer:#2b2f38;
+  --audio-bar-peer:#2b2f38;
+  --audio-play-peer:var(--text-main);
+  --audio-con-peer: rgba(53, 44, 44, 0.222);
 }
 body.light-theme .room-avatar { background-color: #ceced1; }
 
@@ -101,7 +120,19 @@ body.pink-theme {
   --bubble-peer: #ffffff;   
   --border-color: #ffc4d9;    
   --transition-bg: rgba(255, 245, 249, 0.98); 
+
+  --audio-time-me:#fff2f2;
+  --audio-bar-me:#f0f0f0;
+  --audio-play-me: #fafafa;
+  --audio-con-me: rgba(255, 255, 255, 0.471);
+
+  --audio-time-peer:#2b2f38;
+  --audio-bar-peer:#2b2f38;
+  --audio-play-peer:var(--text-main);
+  --audio-con-peer: rgba(53, 44, 44, 0.222);
 }
+
+body.pink-theme .room-avatar{color: var(--bg-panel);}
 
 /* ========================================= */
 /* 2. BASE & RESET                           */
@@ -1066,7 +1097,7 @@ body.is-native .input-container {
 .audio-play-pause {
   padding: 0;
   background-color: transparent;
-  color: #ffffff;
+  color: var(--audio-play-me);
   font-size: 2rem;
   display: flex;
   justify-content: center;
@@ -1077,9 +1108,8 @@ body.is-native .input-container {
   transition: transform 0.1s, background-color 0.2s;
 }
 
-.bubble.me .audio-play-pause {
-  background-color: #ffffff;
-  color: var(--bubble-me); 
+.peer .audio-play-pause {
+  color: var(--audio-play-peer); 
 }
 
 .audio-play-pause:active {
@@ -1102,10 +1132,13 @@ body.is-native .input-container {
 .audio-progress-container {
   width: 100%;
   height: 4px; 
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color:var(--audio-con-me);
   border-radius: 2px;
   position: relative;
   overflow: hidden;
+}
+.peer .audio-progress-container {
+  background-color: var(--audio-con-peer);
 }
 
 .audio-progress-bar {
@@ -1113,13 +1146,13 @@ body.is-native .input-container {
   top: 0;
   left: 0;
   height: 100%;
-  background-color: var(--text-muted);
+  background-color: var(--audio-bar-me);
   width: 0%; 
   transition: width 0.1s linear;
 }
 
-.bubble.me .audio-progress-bar {
-  background-color: #ffffff;
+.peer .audio-progress-bar {
+  background-color: var(--audio-bar-peer);
 }
 
 .audio-time {
@@ -1127,10 +1160,10 @@ body.is-native .input-container {
   display: block;
 
   flex: none;
-  color: var(--text-muted);
+  color: var(--audio-time-me);
   align-self: flex-end; 
 }
 
-.bubble.me .audio-time {
-  color: rgba(255, 255, 255, 0.8);
+.peer .audio-time {
+  color: var(--audio-time-peer);
 }
