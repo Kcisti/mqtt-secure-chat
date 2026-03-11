@@ -19,6 +19,7 @@ let pressTimer;
 let isLongPress = false;
 let selectedPinForOptions = null;
 
+const PrivacyScreen = window.Capacitor ? window.Capacitor.Plugins.PrivacyScreen : null;
 let unreadRooms = JSON.parse(localStorage.getItem('bchat_unread')) || [];
 const isNativeApp = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 
@@ -48,6 +49,13 @@ function messageExists(id) {
   return localChatHistory.some(m => m.id === id);
 }
 
+async function abilitaProtezioneSchermo() {
+    if (isNativeApp && PrivacyScreen) {
+        try {
+            await PrivacyScreen.enable();      
+        } catch (e) {}
+    }
+}abilitaProtezioneSchermo()
 
 async function authenticateUser(reasonText) {
     if (isNativeApp && window.Capacitor && window.Capacitor.Plugins.NativeBiometric) {
@@ -1098,11 +1106,11 @@ async function handleLocation(e) {
     }
 }
 
-// --- REGISTRAZIONE VOCALE ---
+
 let mediaRecorder;
 let audioChunks = [];
 let isRecording = false;
-let recordStartTime = 0; // CRONOMETRO AGGIUNTO
+let recordStartTime = 0; 
 
 async function handleRecord(e) {
     if (e && e.type !== 'click') e.preventDefault();
@@ -1110,7 +1118,6 @@ async function handleRecord(e) {
     const icon = recordBtn.querySelector('ion-icon');
 
     if (isRecording) {
-        // FERMA E INVIA
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             mediaRecorder.stop();
         }
@@ -1118,7 +1125,7 @@ async function handleRecord(e) {
         recordBtn.classList.remove('recording');
         icon.setAttribute('name', 'mic');
     } else {
-        // INIZIA REGISTRAZIONE
+
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
@@ -1129,7 +1136,6 @@ async function handleRecord(e) {
             };
 
             mediaRecorder.onstop = async () => {
-                // Calcoliamo i secondi esatti passati da quando ha premuto REC
                 const durationSec = Math.max(1, Math.round((Date.now() - recordStartTime) / 1000));
                 
                 const audioType = mediaRecorder.mimeType || (isNativeApp ? 'audio/mp4' : 'audio/webm');
@@ -1153,7 +1159,6 @@ async function handleRecord(e) {
                     const isBombActive = (attachIcon && attachIcon.getAttribute('name') === 'radio-button-on') || 
                                          (panelIcon && panelIcon.getAttribute('name') === 'radio-button-on');
 
-                    // NASCONDIAMO LA DURATA NEL NOME FILE (es. vocal_7.m4a)
                     const dynamicFileName = `vocal_${durationSec}.m4a`;
 
                     const msgObj = { id: msgId, sender: 'me', text: base64Audio, time: Date.now(), isBomb: isBombActive, msgType: 'audio', fileName: dynamicFileName };
@@ -1174,7 +1179,7 @@ async function handleRecord(e) {
                 };
             };
 
-            recordStartTime = Date.now(); // AVVIA IL CRONOMETRO
+            recordStartTime = Date.now(); 
             mediaRecorder.start();
             isRecording = true;
             recordBtn.classList.add('recording');
