@@ -108,7 +108,6 @@
 
           <button id="btn-custom-name" class="action-item">Custom Name</button>
           <button id="btn-lock-room" class="action-item">Lock Room</button>
-
           <button id="btn-remove-room" class="action-item danger">Remove Room</button>
 
           <div class="action-menu-divider"></div>
@@ -120,8 +119,6 @@
         <ion-icon name="add"></ion-icon>
       </button>
     </div>
-
-  
 
     <div id="chat-screen" class="screen">
       <div class="chat-header">
@@ -176,8 +173,10 @@
       </div>
 
       <div id="msg-options-overlay" class="new-room-overlay">
-        <div class="action-menu" style=" width: fit-content;">
-          <button id="btn-delete-msg" class="action-item danger" style="padding: 0.5 0.7rem; border: none; justify-content: center;">Delete Message</button>
+        <div class="action-menu" style=" width: 220px;">
+          <button id="btn-report-msg" class="action-item danger" style="border-bottom:1px solid var(--border-color) ;">Report Message</button>
+          <button id="btn-ban-sender" class="action-item danger" style="border-bottom:1px solid var(--border-color) ;">Block Sender</button>
+          <button id="btn-delete-msg" class="action-item danger">Delete Message</button>
         </div>
       </div>
     </div>
