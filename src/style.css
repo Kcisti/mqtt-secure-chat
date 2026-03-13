@@ -216,19 +216,28 @@ body.is-native #app-container {
 }
 
 @media (min-width: 640px) {
-  body {
+  body.is-web {
+    position: relative;
+    overflow: hidden;
+    touch-action: none;
     justify-content: center;
     align-items: center;
     background-color: var(--bg-panel);
   }
-  #app-container {
+  body.is-web #app-container {
+    min-width: 600px;
     max-width: 600px;
-    height: 90vh;
+    height: 90dvh;
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     overflow: hidden;
-    position: relative; /* Override per PC */
+    position: relative;
   }
+
+  .room-list-body{
+    height: none;
+  }
+
 }
 
 /* ========================================= */

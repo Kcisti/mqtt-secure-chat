@@ -21,7 +21,7 @@ export function showScreen(screenId) {
 export function setConnectionStatus(isConnected, currentPin, text) {
   const headerTitle = document.querySelector(".header-info h3");
   const color = isConnected ? "var(--primary)" : "var(--danger)";
-  headerTitle.innerHTML = `Secure Room ${currentPin} <ion-icon name="lock-closed" 
+  headerTitle.innerHTML = `DeepWire Room ${currentPin} <ion-icon name="lock-closed" 
   class="header-lock"></ion-icon><span style="color:${color};margin-left: 0.5rem;
   ">●</span>`;
   document.getElementById("status-text").innerText = text;
